@@ -79,11 +79,42 @@ const Index = () => {
     setStudents(prev => [...prev, newStudent]);
     setSelectedStudentId(newStudent.id);
     setIsAddStudentOpen(false);
-    setActiveTab("avatars");
     
     toast.success("学生添加成功", {
       description: `${name} (${studentId}) 已添加到系统`
     });
+  };
+
+  // Handle deleting a student
+  const handleDeleteStudent = (studentId: string) => {
+    const studentToDelete = students.find(s => s.id === studentId);
+    if (!studentToDelete) return;
+
+    setStudents(prev => prev.filter(s => s.id !== studentId));
+    
+    // If we're deleting the currently selected student, clear the selection
+    if (selectedStudentId === studentId) {
+      setSelectedStudentId(null);
+    }
+    
+    toast.success("学生已删除", {
+      description: `${studentToDelete.name} 已从系统中移除`
+    });
+  };
+
+  // Handle updating a student's avatar
+  const handleUpdateAvatar = (studentId: string, newAvatar: string) => {
+    setStudents(prev => 
+      prev.map(student => {
+        if (student.id === studentId) {
+          return {
+            ...student,
+            avatar: newAvatar
+          };
+        }
+        return student;
+      })
+    );
   };
 
   // Handle adding points to a student
@@ -118,6 +149,12 @@ const Index = () => {
 
   // Handle selecting a student
   const handleSelectStudent = (studentId: string) => {
+    // Toggle selection if clicking the same student
+    if (selectedStudentId === studentId) {
+      setSelectedStudentId(null);
+      return;
+    }
+    
     setSelectedStudentId(studentId);
     // Show student details on mobile
     if (window.innerWidth < 768) {
@@ -125,17 +162,14 @@ const Index = () => {
     }
   };
 
-  // Responsive layout adjustments
-  const isMobileView = typeof window !== 'undefined' && window.innerWidth < 768;
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 p-4 md:p-8">
       <div className="max-w-7xl mx-auto">
         <Header />
 
-        <div className="flex justify-end mb-4">
+        <div className="mb-8">
           <Dialog open={isAddStudentOpen} onOpenChange={setIsAddStudentOpen}>
-            <DialogTrigger asChild>
+            <DialogTrigger asChild id="add-student-dialog-trigger">
               <Button className="gap-2">
                 <Plus size={16} />
                 添加学生
@@ -163,7 +197,9 @@ const Index = () => {
               <StudentList 
                 students={students} 
                 onSelectStudent={handleSelectStudent} 
-                selectedStudentId={selectedStudentId} 
+                selectedStudentId={selectedStudentId}
+                onDeleteStudent={handleDeleteStudent}
+                onUpdateAvatar={handleUpdateAvatar}
               />
             </TabsContent>
             <TabsContent value="detail" className="mt-4 space-y-6 animate-fade-in">
@@ -180,41 +216,30 @@ const Index = () => {
           </Tabs>
         </div>
 
-        {/* Desktop View */}
-        <div className="hidden md:grid grid-cols-12 gap-8">
-          <div className="col-span-12 lg:col-span-7 space-y-6 animate-fade-in">
-            <StudentList 
-              students={students} 
-              onSelectStudent={handleSelectStudent} 
-              selectedStudentId={selectedStudentId} 
-            />
-          </div>
+        {/* Desktop View - Only show the avatar grid */}
+        <div className="hidden md:block space-y-6 animate-fade-in">
+          <StudentList 
+            students={students} 
+            onSelectStudent={handleSelectStudent} 
+            selectedStudentId={selectedStudentId}
+            onDeleteStudent={handleDeleteStudent}
+            onUpdateAvatar={handleUpdateAvatar}
+          />
           
-          <div className="col-span-12 lg:col-span-5 space-y-6">
-            {selectedStudent ? (
-              <div className="space-y-6 animate-fade-in">
+          {/* If a student is selected, show details */}
+          {selectedStudent && (
+            <div className="grid grid-cols-12 gap-8 mt-8">
+              <div className="col-span-12 md:col-span-6 space-y-6 animate-fade-in">
                 <AddPointsForm 
                   student={selectedStudent} 
                   onAddPoints={handleAddPoints} 
                 />
+              </div>
+              <div className="col-span-12 md:col-span-6 space-y-6 animate-fade-in">
                 <PointsHistory student={selectedStudent} />
               </div>
-            ) : (
-              <div className="h-full flex items-center justify-center bg-white/50 rounded-xl p-8 border border-white/20 shadow-sm animate-fade-in">
-                <div className="text-center">
-                  <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Award className="h-8 w-8 text-primary" />
-                  </div>
-                  <h3 className="text-xl font-medium mb-2">
-                    选择一名学生查看详情
-                  </h3>
-                  <p className="text-muted-foreground max-w-md">
-                    从左侧头像列表中选择一名学生，或添加新学生来开始记录积分
-                  </p>
-                </div>
-              </div>
-            )}
-          </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

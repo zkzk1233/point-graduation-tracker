@@ -1,16 +1,31 @@
 
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { Student } from "@/types/student";
 import { Input } from "@/components/ui/input";
-import { Search, GraduationCap, UserCircle } from "lucide-react";
+import { Search, GraduationCap, UserCircle, Trash2, Upload, Plus } from "lucide-react";
 import { getRank } from "@/utils/rankUtils";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 
 interface StudentListProps {
   students: Student[];
   onSelectStudent: (studentId: string) => void;
   selectedStudentId: string | null;
+  onDeleteStudent: (studentId: string) => void;
+  onUpdateAvatar: (studentId: string, newAvatar: string) => void;
 }
 
 // Default avatar URLs for students without custom avatars
@@ -28,9 +43,12 @@ const defaultAvatars = [
 const StudentList: React.FC<StudentListProps> = ({ 
   students, 
   onSelectStudent, 
-  selectedStudentId 
+  selectedStudentId,
+  onDeleteStudent,
+  onUpdateAvatar
 }) => {
   const [searchTerm, setSearchTerm] = useState("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   // Ensure all students have an avatar
   const studentsWithAvatars = students.map((student, index) => ({
@@ -42,6 +60,31 @@ const StudentList: React.FC<StudentListProps> = ({
     student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     student.studentId.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  const handleAvatarUpload = (studentId: string) => {
+    if (fileInputRef.current) {
+      fileInputRef.current.dataset.studentId = studentId;
+      fileInputRef.current.click();
+    }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    const studentId = e.target.dataset.studentId;
+    
+    if (file && studentId) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const newAvatar = event.target?.result as string;
+        onUpdateAvatar(studentId, newAvatar);
+        toast.success("头像已更新");
+      };
+      reader.readAsDataURL(file);
+      
+      // Clear the input so the same file can be selected again
+      e.target.value = '';
+    }
+  };
 
   return (
     <div className="space-y-4">
@@ -73,27 +116,72 @@ const StudentList: React.FC<StudentListProps> = ({
               <TooltipProvider key={student.id}>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <button
-                      onClick={() => onSelectStudent(student.id)}
-                      className={`flex flex-col items-center space-y-2 p-2 rounded-lg transition-all duration-200 hover:bg-primary/10 ${
-                        selectedStudentId === student.id ? 'bg-primary/20 ring-2 ring-primary' : ''
-                      }`}
-                    >
-                      <div className={`relative ${selectedStudentId === student.id ? 'scale-110' : ''}`}>
-                        <Avatar className="w-16 h-16 border-2" style={{ borderColor: rank.color.replace('bg-', '') }}>
-                          <AvatarImage src={student.avatar} alt={student.name} />
-                          <AvatarFallback className={rank.color + ' ' + rank.textColor}>
-                            {student.name.substring(0, 2)}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="absolute -bottom-1 -right-1 text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center bg-white shadow-sm">
-                          {student.totalPoints}
+                    <div className="relative group">
+                      <button
+                        onClick={() => onSelectStudent(student.id)}
+                        className={`flex flex-col items-center space-y-2 p-2 rounded-lg transition-all duration-200 hover:bg-primary/10 ${
+                          selectedStudentId === student.id ? 'bg-primary/20 ring-2 ring-primary' : ''
+                        }`}
+                      >
+                        <div className={`relative ${selectedStudentId === student.id ? 'scale-110' : ''}`}>
+                          <Avatar className="w-16 h-16 border-2" style={{ borderColor: rank.color.replace('bg-', '') }}>
+                            <AvatarImage src={student.avatar} alt={student.name} />
+                            <AvatarFallback className={rank.color + ' ' + rank.textColor}>
+                              {student.name.substring(0, 2)}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="absolute -bottom-1 -right-1 text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center bg-white shadow-sm">
+                            {student.totalPoints}
+                          </div>
                         </div>
+                        <span className="text-xs font-medium text-center truncate w-full">
+                          {student.name}
+                        </span>
+                      </button>
+                      
+                      {/* Avatar upload and delete options */}
+                      <div className="absolute top-0 right-0 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col gap-1">
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleAvatarUpload(student.id);
+                          }}
+                          className="w-8 h-8 bg-blue-500 text-white rounded-full flex items-center justify-center shadow-md hover:bg-blue-600"
+                          title="更新头像"
+                        >
+                          <Upload size={14} />
+                        </button>
+                        
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <button 
+                              onClick={(e) => e.stopPropagation()}
+                              className="w-8 h-8 bg-red-500 text-white rounded-full flex items-center justify-center shadow-md hover:bg-red-600"
+                              title="删除学生"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>确认删除学生</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                您确定要删除 {student.name} 吗？此操作将永久删除该学生及其所有积分记录，无法恢复。
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>取消</AlertDialogCancel>
+                              <AlertDialogAction 
+                                onClick={() => onDeleteStudent(student.id)}
+                                className="bg-red-500 hover:bg-red-600"
+                              >
+                                删除
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
                       </div>
-                      <span className="text-xs font-medium text-center truncate w-full">
-                        {student.name}
-                      </span>
-                    </button>
+                    </div>
                   </TooltipTrigger>
                   <TooltipContent>
                     <p>{student.name}</p>
@@ -104,6 +192,19 @@ const StudentList: React.FC<StudentListProps> = ({
               </TooltipProvider>
             );
           })}
+
+          {/* Add student button */}
+          {students.length < 40 && (
+            <button
+              onClick={() => document.getElementById('add-student-dialog-trigger')?.click()}
+              className="flex flex-col items-center justify-center h-[104px] p-2 rounded-lg border-2 border-dashed border-gray-300 hover:border-primary hover:bg-primary/5 transition-all"
+            >
+              <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center">
+                <Plus className="w-8 h-8 text-gray-400" />
+              </div>
+              <span className="text-xs font-medium mt-2 text-gray-500">添加学生</span>
+            </button>
+          )}
         </div>
       ) : (
         <div className="text-center py-8">
@@ -118,6 +219,16 @@ const StudentList: React.FC<StudentListProps> = ({
           当前显示 {students.length} 名学生，系统支持最多 40 名学生
         </div>
       )}
+      
+      {/* Hidden file input for avatar uploads */}
+      <input 
+        type="file" 
+        ref={fileInputRef} 
+        style={{ display: 'none' }} 
+        accept="image/*"
+        onChange={handleFileChange}
+        data-student-id=""
+      />
     </div>
   );
 };

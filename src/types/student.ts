@@ -10,7 +10,7 @@ export interface Student {
   id: string;
   name: string;
   studentId: string;
-  avatar: string;  // Changed from optional to required
+  avatar: string;  // Required field for student avatar
   totalPoints: number;
   pointsHistory: PointEntry[];
 }
