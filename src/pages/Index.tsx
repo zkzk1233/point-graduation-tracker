@@ -118,11 +118,12 @@ const Index = () => {
   };
 
   // Handle adding points to a student
-  const handleAddPoints = (studentId: string, amount: number, description: string) => {
+  const handleAddPoints = (studentId: string, amount: number, description: string, category: string = "") => {
     const newPointEntry: PointEntry = {
       id: uuidv4(),
       amount,
       description,
+      category: category || "一般活动", // Use category or default if not provided
       timestamp: new Date()
     };
 
@@ -142,7 +143,7 @@ const Index = () => {
     const student = students.find(s => s.id === studentId);
     if (student) {
       toast.success(`积分已记录`, {
-        description: `${student.name}: ${amount > 0 ? '+' : ''}${amount} 分`
+        description: `${student.name}: ${amount > 0 ? '+' : ''}${amount} 分 (${category || "一般活动"})`
       });
     }
   };
