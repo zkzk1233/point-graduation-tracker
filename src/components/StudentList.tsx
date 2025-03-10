@@ -1,15 +1,29 @@
 
 import React, { useState } from "react";
 import { Student } from "@/types/student";
-import StudentCard from "./StudentCard";
 import { Input } from "@/components/ui/input";
-import { Search, GraduationCap } from "lucide-react";
+import { Search, GraduationCap, UserCircle } from "lucide-react";
+import { getRank } from "@/utils/rankUtils";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface StudentListProps {
   students: Student[];
   onSelectStudent: (studentId: string) => void;
   selectedStudentId: string | null;
 }
+
+// Default avatar URLs for students without custom avatars
+const defaultAvatars = [
+  "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&h=150&fit=crop&crop=faces",
+  "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=150&h=150&fit=crop&crop=faces",
+  "https://images.unsplash.com/photo-1633332755192-727a05c4013d?w=150&h=150&fit=crop&crop=faces",
+  "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&h=150&fit=crop&crop=faces",
+  "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&h=150&fit=crop&crop=faces",
+  "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&h=150&fit=crop&crop=faces",
+  "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=faces",
+  "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150&h=150&fit=crop&crop=faces",
+];
 
 const StudentList: React.FC<StudentListProps> = ({ 
   students, 
@@ -18,17 +32,23 @@ const StudentList: React.FC<StudentListProps> = ({
 }) => {
   const [searchTerm, setSearchTerm] = useState("");
   
-  const filteredStudents = students.filter(student => 
+  // Ensure all students have an avatar
+  const studentsWithAvatars = students.map((student, index) => ({
+    ...student,
+    avatar: student.avatar || defaultAvatars[index % defaultAvatars.length]
+  }));
+  
+  const filteredStudents = studentsWithAvatars.filter(student => 
     student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     student.studentId.toLowerCase().includes(searchTerm.toLowerCase())
   );
-  
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center text-lg font-medium">
           <GraduationCap className="w-5 h-5 mr-2 text-primary" />
-          <h2>学生列表</h2>
+          <h2>学生头像选择</h2>
         </div>
         <div className="text-sm text-muted-foreground">
           共 {students.length} 名学生
@@ -45,24 +65,59 @@ const StudentList: React.FC<StudentListProps> = ({
         />
       </div>
       
-      <div className="space-y-3 mt-2">
-        {filteredStudents.length > 0 ? (
-          filteredStudents.map(student => (
-            <StudentCard
-              key={student.id}
-              student={student}
-              onSelect={onSelectStudent}
-              isSelected={selectedStudentId === student.id}
-            />
-          ))
-        ) : (
-          <div className="text-center py-8">
-            <div className="text-muted-foreground">
-              {searchTerm ? "未找到匹配的学生" : "暂无学生，请添加学生"}
-            </div>
+      {filteredStudents.length > 0 ? (
+        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-8 gap-3 mt-4">
+          {filteredStudents.map(student => {
+            const rank = getRank(student.totalPoints);
+            return (
+              <TooltipProvider key={student.id}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      onClick={() => onSelectStudent(student.id)}
+                      className={`flex flex-col items-center space-y-2 p-2 rounded-lg transition-all duration-200 hover:bg-primary/10 ${
+                        selectedStudentId === student.id ? 'bg-primary/20 ring-2 ring-primary' : ''
+                      }`}
+                    >
+                      <div className={`relative ${selectedStudentId === student.id ? 'scale-110' : ''}`}>
+                        <Avatar className="w-16 h-16 border-2" style={{ borderColor: rank.color.replace('bg-', '') }}>
+                          <AvatarImage src={student.avatar} alt={student.name} />
+                          <AvatarFallback className={rank.color + ' ' + rank.textColor}>
+                            {student.name.substring(0, 2)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="absolute -bottom-1 -right-1 text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center bg-white shadow-sm">
+                          {student.totalPoints}
+                        </div>
+                      </div>
+                      <span className="text-xs font-medium text-center truncate w-full">
+                        {student.name}
+                      </span>
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>{student.name}</p>
+                    <p className="text-xs text-muted-foreground">学号: {student.studentId}</p>
+                    <p className="text-xs">积分: {student.totalPoints}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="text-center py-8">
+          <div className="text-muted-foreground">
+            {searchTerm ? "未找到匹配的学生" : "暂无学生，请添加学生"}
           </div>
-        )}
-      </div>
+        </div>
+      )}
+
+      {students.length < 40 && (
+        <div className="text-center text-sm text-muted-foreground mt-4">
+          当前显示 {students.length} 名学生，系统支持最多 40 名学生
+        </div>
+      )}
     </div>
   );
 };
