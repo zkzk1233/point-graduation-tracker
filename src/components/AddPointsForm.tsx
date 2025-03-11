@@ -6,98 +6,90 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Plus, Minus, BookOpen, Languages, FileText, BookMarked, GraduationCap, PenTool } from "lucide-react";
+import { Plus, Minus, BookOpen, Languages, FileText, BookMarked, GraduationCap, PenTool, Pencil } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
+import { Card } from "@/components/ui/card";
 
 interface AddPointsFormProps {
   student: Student;
   onAddPoints: (studentId: string, amount: number, description: string, category: string) => void;
 }
 
+const pointValues = [1, 2, 3];
+
 const AddPointsForm: React.FC<AddPointsFormProps> = ({ student, onAddPoints }) => {
   const [pointType, setPointType] = useState<"add" | "subtract">("add");
-  const [amount, setAmount] = useState("");
+  const [selectedAmount, setSelectedAmount] = useState<number | null>(null);
   const [description, setDescription] = useState("");
-  const [category, setCategory] = useState<string>(POINT_CATEGORIES[0]);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [customCategory, setCustomCategory] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleCategoryChange = (value: string) => {
-    setCategory(value);
-    if (value !== "自定义") {
-      // If it's a predefined category, set some standard text for that category
-      setDescription(`${value}活动`);
+  const getCategoryIcon = (cat: string) => {
+    switch (cat) {
+      case "背诵": return <BookOpen className="w-5 h-5" />;
+      case "翻译": return <Languages className="w-5 h-5" />;
+      case "主题归纳": return <FileText className="w-5 h-5" />;
+      case "诗词鉴赏": return <BookMarked className="w-5 h-5" />;
+      case "名著过关": return <GraduationCap className="w-5 h-5" />;
+      case "课堂小测": return <PenTool className="w-5 h-5" />;
+      case "自定义": return <Pencil className="w-5 h-5" />;
+      default: return null;
+    }
+  };
+
+  const handleCategorySelect = (category: string) => {
+    setSelectedCategory(category);
+    
+    if (category !== "自定义") {
+      // Set standard description for the selected category
+      setDescription(`${category}活动`);
     } else {
       setDescription("");
     }
   };
 
-  const getCategoryIcon = (cat: string) => {
-    switch (cat) {
-      case "背诵": return <BookOpen className="w-4 h-4" />;
-      case "翻译": return <Languages className="w-4 h-4" />;
-      case "主题归纳": return <FileText className="w-4 h-4" />;
-      case "诗词鉴赏": return <BookMarked className="w-4 h-4" />;
-      case "名著过关": return <GraduationCap className="w-4 h-4" />;
-      case "课堂小测": return <PenTool className="w-4 h-4" />;
-      default: return null;
+  const handleSubmit = () => {
+    if (!selectedCategory) {
+      toast.error("请选择积分类别");
+      return;
     }
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
     
-    const numAmount = parseInt(amount);
-    
-    if (isNaN(numAmount) || numAmount <= 0) {
-      toast({
-        title: "无效的积分数量",
-        description: "请输入大于0的积分数量",
-        variant: "destructive",
-      });
+    if (!selectedAmount) {
+      toast.error("请选择积分数量");
       return;
     }
     
     let finalDescription = description.trim();
-    const finalCategory = category === "自定义" ? customCategory.trim() : category;
+    const finalCategory = selectedCategory === "自定义" ? customCategory.trim() : selectedCategory;
     
     if (!finalDescription) {
-      toast({
-        title: "请填写获得积分的原因",
-        description: "积分原因不能为空",
-        variant: "destructive",
-      });
+      toast.error("请填写获得积分的原因");
       return;
     }
 
-    if (category === "自定义" && !customCategory.trim()) {
-      toast({
-        title: "请填写自定义类别",
-        description: "自定义类别不能为空",
-        variant: "destructive",
-      });
+    if (selectedCategory === "自定义" && !customCategory.trim()) {
+      toast.error("请填写自定义类别");
       return;
     }
     
     setIsSubmitting(true);
     
     // Calculate the actual amount (positive or negative)
-    const actualAmount = pointType === "add" ? numAmount : -numAmount;
+    const actualAmount = pointType === "add" ? selectedAmount : -selectedAmount;
     
     // Simulate a slight delay for better UX
     setTimeout(() => {
       onAddPoints(student.id, actualAmount, finalDescription, finalCategory);
       
-      toast({
-        title: "积分更新成功",
-        description: `${student.name} ${pointType === "add" ? "获得" : "扣除"} ${numAmount} 积分`,
-      });
+      toast.success(`${student.name} ${pointType === "add" ? "获得" : "扣除"} ${selectedAmount} 积分`);
       
       // Reset form
-      setAmount("");
+      setSelectedAmount(null);
       setDescription("");
-      if (category === "自定义") {
+      setSelectedCategory(null);
+      if (selectedCategory === "自定义") {
         setCustomCategory("");
       }
       setIsSubmitting(false);
@@ -105,7 +97,7 @@ const AddPointsForm: React.FC<AddPointsFormProps> = ({ student, onAddPoints }) =
   };
 
   return (
-    <form onSubmit={handleSubmit} className="glass-card rounded-xl p-4 space-y-4">
+    <div className="glass-card rounded-xl p-4 space-y-4">
       <h3 className="font-medium mb-4">为 {student.name} {pointType === "add" ? "添加" : "扣除"} 积分</h3>
       
       <div className="space-y-4">
@@ -135,25 +127,24 @@ const AddPointsForm: React.FC<AddPointsFormProps> = ({ student, onAddPoints }) =
         </div>
         
         <div className="space-y-2">
-          <Label htmlFor="category">积分类别</Label>
-          <Select value={category} onValueChange={handleCategoryChange}>
-            <SelectTrigger>
-              <SelectValue placeholder="选择积分类别" />
-            </SelectTrigger>
-            <SelectContent>
-              {POINT_CATEGORIES.map((cat) => (
-                <SelectItem key={cat} value={cat} className="flex items-center">
-                  <div className="flex items-center gap-2">
-                    {getCategoryIcon(cat)}
-                    <span>{cat}</span>
-                  </div>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <Label>选择积分类别</Label>
+          <div className="grid grid-cols-4 gap-2">
+            {[...POINT_CATEGORIES].map((category) => (
+              <Card 
+                key={category}
+                className={`p-3 cursor-pointer hover:bg-primary/10 transition-colors flex flex-col items-center justify-center gap-1 ${
+                  selectedCategory === category ? "ring-2 ring-primary bg-primary/20" : ""
+                }`}
+                onClick={() => handleCategorySelect(category)}
+              >
+                {getCategoryIcon(category)}
+                <span className="text-xs text-center">{category}</span>
+              </Card>
+            ))}
+          </div>
         </div>
 
-        {category === "自定义" && (
+        {selectedCategory === "自定义" && (
           <div className="space-y-2">
             <Label htmlFor="customCategory">自定义类别</Label>
             <Input
@@ -167,16 +158,22 @@ const AddPointsForm: React.FC<AddPointsFormProps> = ({ student, onAddPoints }) =
         )}
         
         <div className="space-y-2">
-          <Label htmlFor="amount">积分数量</Label>
-          <Input
-            id="amount"
-            type="number"
-            min="1"
-            placeholder="请输入积分数量"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-            className="bg-white/50"
-          />
+          <Label>选择积分数量</Label>
+          <div className="flex space-x-2">
+            {pointValues.map((value) => (
+              <Button
+                key={value}
+                variant="outline"
+                size="lg"
+                className={`w-full h-16 text-xl ${
+                  selectedAmount === value ? "ring-2 ring-primary bg-primary/20" : ""
+                }`}
+                onClick={() => setSelectedAmount(value)}
+              >
+                {value}
+              </Button>
+            ))}
+          </div>
         </div>
         
         <div className="space-y-2">
@@ -193,13 +190,14 @@ const AddPointsForm: React.FC<AddPointsFormProps> = ({ student, onAddPoints }) =
       </div>
       
       <Button 
-        type="submit" 
+        type="button"
+        onClick={handleSubmit}
         className={pointType === "add" ? "w-full bg-green-600 hover:bg-green-700" : "w-full bg-red-600 hover:bg-red-700"} 
-        disabled={isSubmitting}
+        disabled={isSubmitting || !selectedCategory || !selectedAmount}
       >
         {isSubmitting ? "处理中..." : `${pointType === "add" ? "添加" : "扣除"}积分`}
       </Button>
-    </form>
+    </div>
   );
 };
 
