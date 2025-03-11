@@ -6,7 +6,20 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Plus, Minus, BookOpen, Languages, FileText, BookMarked, GraduationCap, PenTool, Pencil } from "lucide-react";
+import { 
+  Plus, 
+  Minus, 
+  BookOpen, 
+  Languages, 
+  FileText, 
+  BookMarked, 
+  GraduationCap, 
+  PenTool, 
+  Pencil,
+  BookText,
+  BookA,
+  ListChecks 
+} from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { Card } from "@/components/ui/card";
@@ -18,12 +31,28 @@ interface AddPointsFormProps {
 
 const pointValues = [1, 2, 3];
 
+// Define recitation subcategories
+const RECITATION_TEXTS = [
+  "《回延安》",
+  "《桃花源记》",
+  "《小石潭记》",
+  "《关雎》",
+  "《蒹葭》",
+  "《式微》",
+  "《子衿》",
+  "《送杜少府之任蜀州》",
+  "《望洞庭湖赠张丞相》",
+  "其他" // Option to add more
+];
+
 const AddPointsForm: React.FC<AddPointsFormProps> = ({ student, onAddPoints }) => {
   const [pointType, setPointType] = useState<"add" | "subtract">("add");
   const [selectedAmount, setSelectedAmount] = useState<number | null>(null);
   const [description, setDescription] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [customCategory, setCustomCategory] = useState("");
+  const [selectedRecitationText, setSelectedRecitationText] = useState<string | null>(null);
+  const [customRecitationText, setCustomRecitationText] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const getCategoryIcon = (cat: string) => {
@@ -42,11 +71,29 @@ const AddPointsForm: React.FC<AddPointsFormProps> = ({ student, onAddPoints }) =
   const handleCategorySelect = (category: string) => {
     setSelectedCategory(category);
     
+    // Reset recitation text selection when changing categories
+    if (category !== "背诵") {
+      setSelectedRecitationText(null);
+      setCustomRecitationText("");
+    }
+    
     if (category !== "自定义") {
       // Set standard description for the selected category
       setDescription(`${category}活动`);
     } else {
       setDescription("");
+    }
+  };
+
+  const handleRecitationTextSelect = (text: string) => {
+    setSelectedRecitationText(text);
+    
+    if (text !== "其他") {
+      setDescription(`背诵${text}`);
+      setCustomRecitationText("");
+    } else {
+      setDescription("背诵");
+      setCustomRecitationText("");
     }
   };
 
@@ -62,7 +109,15 @@ const AddPointsForm: React.FC<AddPointsFormProps> = ({ student, onAddPoints }) =
     }
     
     let finalDescription = description.trim();
-    const finalCategory = selectedCategory === "自定义" ? customCategory.trim() : selectedCategory;
+    let finalCategory = selectedCategory === "自定义" ? customCategory.trim() : selectedCategory;
+    
+    // For recitation with custom text
+    if (selectedCategory === "背诵" && selectedRecitationText === "其他" && customRecitationText.trim()) {
+      finalDescription = `背诵《${customRecitationText.trim()}》`;
+    } else if (selectedCategory === "背诵" && !selectedRecitationText) {
+      toast.error("请选择背诵的具体篇目");
+      return;
+    }
     
     if (!finalDescription) {
       toast.error("请填写获得积分的原因");
@@ -89,6 +144,8 @@ const AddPointsForm: React.FC<AddPointsFormProps> = ({ student, onAddPoints }) =
       setSelectedAmount(null);
       setDescription("");
       setSelectedCategory(null);
+      setSelectedRecitationText(null);
+      setCustomRecitationText("");
       if (selectedCategory === "自定义") {
         setCustomCategory("");
       }
@@ -143,6 +200,41 @@ const AddPointsForm: React.FC<AddPointsFormProps> = ({ student, onAddPoints }) =
             ))}
           </div>
         </div>
+
+        {/* Show recitation texts if "背诵" is selected */}
+        {selectedCategory === "背诵" && (
+          <div className="space-y-2">
+            <Label>选择背诵篇目</Label>
+            <div className="grid grid-cols-3 gap-2">
+              {RECITATION_TEXTS.map((text) => (
+                <Card 
+                  key={text}
+                  className={`p-3 cursor-pointer hover:bg-primary/10 transition-colors flex flex-col items-center justify-center gap-1 ${
+                    selectedRecitationText === text ? "ring-2 ring-primary bg-primary/20" : ""
+                  }`}
+                  onClick={() => handleRecitationTextSelect(text)}
+                >
+                  {text === "其他" ? <ListChecks className="w-5 h-5" /> : <BookText className="w-5 h-5" />}
+                  <span className="text-xs text-center">{text}</span>
+                </Card>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Show custom text input if "其他" is selected for recitation */}
+        {selectedCategory === "背诵" && selectedRecitationText === "其他" && (
+          <div className="space-y-2">
+            <Label htmlFor="customRecitationText">自定义背诵篇目</Label>
+            <Input
+              id="customRecitationText"
+              placeholder="请输入背诵篇目名称"
+              value={customRecitationText}
+              onChange={(e) => setCustomRecitationText(e.target.value)}
+              className="bg-white/50"
+            />
+          </div>
+        )}
 
         {selectedCategory === "自定义" && (
           <div className="space-y-2">
