@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { 
   Plus, 
   Minus, 
@@ -18,16 +17,20 @@ import {
   Pencil,
   BookText,
   BookA,
-  ListChecks 
+  ListChecks,
+  ArrowLeft,
+  Check
 } from "lucide-react";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { toast } from "sonner";
 import { Card } from "@/components/ui/card";
+import { toast } from "sonner";
 
 interface AddPointsFormProps {
   student: Student;
   onAddPoints: (studentId: string, amount: number, description: string, category: string) => void;
 }
+
+// Define step types
+type Step = "pointType" | "category" | "recitationText" | "customText" | "pointAmount" | "description" | "confirmation";
 
 const pointValues = [1, 2, 3];
 
@@ -46,13 +49,17 @@ const RECITATION_TEXTS = [
 ];
 
 const AddPointsForm: React.FC<AddPointsFormProps> = ({ student, onAddPoints }) => {
+  // Current step in the workflow
+  const [currentStep, setCurrentStep] = useState<Step>("pointType");
+  
+  // Form state
   const [pointType, setPointType] = useState<"add" | "subtract">("add");
-  const [selectedAmount, setSelectedAmount] = useState<number | null>(null);
-  const [description, setDescription] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [customCategory, setCustomCategory] = useState("");
   const [selectedRecitationText, setSelectedRecitationText] = useState<string | null>(null);
   const [customRecitationText, setCustomRecitationText] = useState("");
+  const [customCategory, setCustomCategory] = useState("");
+  const [selectedAmount, setSelectedAmount] = useState<number | null>(null);
+  const [description, setDescription] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const getCategoryIcon = (cat: string) => {
@@ -75,13 +82,16 @@ const AddPointsForm: React.FC<AddPointsFormProps> = ({ student, onAddPoints }) =
     if (category !== "背诵") {
       setSelectedRecitationText(null);
       setCustomRecitationText("");
-    }
-    
-    if (category !== "自定义") {
       // Set standard description for the selected category
       setDescription(`${category}活动`);
+      setCurrentStep("pointAmount");
     } else {
+      setCurrentStep("recitationText");
+    }
+    
+    if (category === "自定义") {
       setDescription("");
+      setCurrentStep("description");
     }
   };
 
@@ -91,10 +101,99 @@ const AddPointsForm: React.FC<AddPointsFormProps> = ({ student, onAddPoints }) =
     if (text !== "其他") {
       setDescription(`背诵${text}`);
       setCustomRecitationText("");
+      setCurrentStep("pointAmount");
     } else {
       setDescription("背诵");
       setCustomRecitationText("");
+      setCurrentStep("customText");
     }
+  };
+
+  const handlePointTypeSelect = (type: "add" | "subtract") => {
+    setPointType(type);
+    setCurrentStep("category");
+  };
+
+  const handlePointAmountSelect = (amount: number) => {
+    setSelectedAmount(amount);
+    
+    // If it's not background recitation or custom category, go to confirmation
+    if (
+      (selectedCategory !== "背诵" && selectedCategory !== "自定义") || 
+      (selectedCategory === "背诵" && selectedRecitationText && selectedRecitationText !== "其他")
+    ) {
+      setCurrentStep("confirmation");
+    } else if (selectedCategory === "自定义") {
+      // For custom category, we need the description
+      setCurrentStep("description");
+    } else {
+      // For other cases, go to description
+      setCurrentStep("description");
+    }
+  };
+
+  const handleCustomTextSubmit = () => {
+    if (customRecitationText.trim()) {
+      setDescription(`背诵《${customRecitationText.trim()}》`);
+      setCurrentStep("pointAmount");
+    } else {
+      toast.error("请输入背诵篇目");
+    }
+  };
+
+  const handleDescriptionSubmit = () => {
+    if (description.trim()) {
+      setCurrentStep("confirmation");
+    } else {
+      toast.error("请填写获得积分的原因");
+    }
+  };
+
+  const handleBackButton = () => {
+    // Logic to go back to the previous step
+    if (currentStep === "category") {
+      setCurrentStep("pointType");
+    } else if (currentStep === "recitationText") {
+      setCurrentStep("category");
+    } else if (currentStep === "customText") {
+      setCurrentStep("recitationText");
+    } else if (currentStep === "pointAmount") {
+      if (selectedCategory === "背诵") {
+        if (selectedRecitationText === "其他") {
+          setCurrentStep("customText");
+        } else {
+          setCurrentStep("recitationText");
+        }
+      } else {
+        setCurrentStep("category");
+      }
+    } else if (currentStep === "description") {
+      if (selectedCategory === "自定义") {
+        setCurrentStep("pointAmount");
+      } else if (selectedCategory === "背诵" && selectedRecitationText === "其他") {
+        setCurrentStep("customText");
+      } else {
+        setCurrentStep("pointAmount");
+      }
+    } else if (currentStep === "confirmation") {
+      if (selectedCategory === "自定义" || (selectedCategory === "背诵" && selectedRecitationText === "其他")) {
+        setCurrentStep("description");
+      } else {
+        setCurrentStep("pointAmount");
+      }
+    }
+  };
+
+  const handleReset = () => {
+    // Reset all states to initial values
+    setCurrentStep("pointType");
+    setPointType("add");
+    setSelectedCategory(null);
+    setSelectedRecitationText(null);
+    setCustomRecitationText("");
+    setCustomCategory("");
+    setSelectedAmount(null);
+    setDescription("");
   };
 
   const handleSubmit = () => {
@@ -111,21 +210,13 @@ const AddPointsForm: React.FC<AddPointsFormProps> = ({ student, onAddPoints }) =
     let finalDescription = description.trim();
     let finalCategory = selectedCategory === "自定义" ? customCategory.trim() : selectedCategory;
     
-    // For recitation with custom text
-    if (selectedCategory === "背诵" && selectedRecitationText === "其他" && customRecitationText.trim()) {
-      finalDescription = `背诵《${customRecitationText.trim()}》`;
-    } else if (selectedCategory === "背诵" && !selectedRecitationText) {
-      toast.error("请选择背诵的具体篇目");
+    if (selectedCategory === "自定义" && !customCategory.trim()) {
+      toast.error("请填写自定义类别");
       return;
     }
     
     if (!finalDescription) {
       toast.error("请填写获得积分的原因");
-      return;
-    }
-
-    if (selectedCategory === "自定义" && !customCategory.trim()) {
-      toast.error("请填写自定义类别");
       return;
     }
     
@@ -141,154 +232,311 @@ const AddPointsForm: React.FC<AddPointsFormProps> = ({ student, onAddPoints }) =
       toast.success(`${student.name} ${pointType === "add" ? "获得" : "扣除"} ${selectedAmount} 积分`);
       
       // Reset form
-      setSelectedAmount(null);
-      setDescription("");
-      setSelectedCategory(null);
-      setSelectedRecitationText(null);
-      setCustomRecitationText("");
-      if (selectedCategory === "自定义") {
-        setCustomCategory("");
-      }
+      handleReset();
       setIsSubmitting(false);
     }, 300);
+  };
+
+  // Render different views based on current step
+  const renderStepContent = () => {
+    switch (currentStep) {
+      case "pointType":
+        return (
+          <div className="space-y-4">
+            <h2 className="text-xl font-bold text-center">选择积分操作</h2>
+            <div className="grid grid-cols-2 gap-4">
+              <Card 
+                className={`p-6 cursor-pointer hover:bg-primary/10 transition-colors flex flex-col items-center justify-center gap-4 ${
+                  pointType === "add" ? "ring-2 ring-primary bg-primary/20" : ""
+                }`}
+                onClick={() => handlePointTypeSelect("add")}
+              >
+                <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center">
+                  <Plus className="w-8 h-8 text-green-600" />
+                </div>
+                <span className="text-lg font-medium">添加积分</span>
+              </Card>
+              
+              <Card 
+                className={`p-6 cursor-pointer hover:bg-primary/10 transition-colors flex flex-col items-center justify-center gap-4 ${
+                  pointType === "subtract" ? "ring-2 ring-primary bg-primary/20" : ""
+                }`}
+                onClick={() => handlePointTypeSelect("subtract")}
+              >
+                <div className="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center">
+                  <Minus className="w-8 h-8 text-red-600" />
+                </div>
+                <span className="text-lg font-medium">扣除积分</span>
+              </Card>
+            </div>
+          </div>
+        );
+        
+      case "category":
+        return (
+          <div className="space-y-4">
+            <div className="flex items-center mb-4">
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={handleBackButton}
+                className="mr-2"
+              >
+                <ArrowLeft className="w-5 h-5" />
+              </Button>
+              <h2 className="text-xl font-bold">选择积分类别</h2>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-3">
+              {[...POINT_CATEGORIES].map((category) => (
+                <Card 
+                  key={category}
+                  className={`p-4 cursor-pointer hover:bg-primary/10 transition-colors flex flex-col items-center justify-center gap-2 ${
+                    selectedCategory === category ? "ring-2 ring-primary bg-primary/20" : ""
+                  }`}
+                  onClick={() => handleCategorySelect(category)}
+                >
+                  <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center">
+                    {getCategoryIcon(category)}
+                  </div>
+                  <span className="text-center font-medium">{category}</span>
+                </Card>
+              ))}
+            </div>
+          </div>
+        );
+        
+      case "recitationText":
+        return (
+          <div className="space-y-4">
+            <div className="flex items-center mb-4">
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={handleBackButton}
+                className="mr-2"
+              >
+                <ArrowLeft className="w-5 h-5" />
+              </Button>
+              <h2 className="text-xl font-bold">选择背诵篇目</h2>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-3">
+              {RECITATION_TEXTS.map((text) => (
+                <Card 
+                  key={text}
+                  className={`p-4 cursor-pointer hover:bg-primary/10 transition-colors flex flex-col items-center justify-center gap-2 ${
+                    selectedRecitationText === text ? "ring-2 ring-primary bg-primary/20" : ""
+                  }`}
+                  onClick={() => handleRecitationTextSelect(text)}
+                >
+                  <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center">
+                    {text === "其他" ? <ListChecks className="w-5 h-5" /> : <BookText className="w-5 h-5" />}
+                  </div>
+                  <span className="text-center text-sm font-medium">{text}</span>
+                </Card>
+              ))}
+            </div>
+          </div>
+        );
+        
+      case "customText":
+        return (
+          <div className="space-y-4">
+            <div className="flex items-center mb-4">
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={handleBackButton}
+                className="mr-2"
+              >
+                <ArrowLeft className="w-5 h-5" />
+              </Button>
+              <h2 className="text-xl font-bold">自定义背诵篇目</h2>
+            </div>
+            
+            <div className="space-y-4">
+              <Label htmlFor="customRecitationText">请输入背诵篇目名称</Label>
+              <Input
+                id="customRecitationText"
+                placeholder="例如：离骚"
+                value={customRecitationText}
+                onChange={(e) => setCustomRecitationText(e.target.value)}
+                className="bg-white/50"
+              />
+              
+              <div className="flex justify-end">
+                <Button 
+                  onClick={handleCustomTextSubmit}
+                  disabled={!customRecitationText.trim()}
+                >
+                  确认
+                </Button>
+              </div>
+            </div>
+          </div>
+        );
+        
+      case "pointAmount":
+        return (
+          <div className="space-y-4">
+            <div className="flex items-center mb-4">
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={handleBackButton}
+                className="mr-2"
+              >
+                <ArrowLeft className="w-5 h-5" />
+              </Button>
+              <h2 className="text-xl font-bold">选择积分数量</h2>
+            </div>
+            
+            <div className="grid grid-cols-3 gap-3">
+              {pointValues.map((value) => (
+                <Card
+                  key={value}
+                  className={`p-6 cursor-pointer hover:bg-primary/10 transition-colors flex items-center justify-center ${
+                    selectedAmount === value ? "ring-2 ring-primary bg-primary/20" : ""
+                  }`}
+                  onClick={() => handlePointAmountSelect(value)}
+                >
+                  <span className="text-3xl font-bold">{value}</span>
+                </Card>
+              ))}
+            </div>
+          </div>
+        );
+        
+      case "description":
+        return (
+          <div className="space-y-4">
+            <div className="flex items-center mb-4">
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={handleBackButton}
+                className="mr-2"
+              >
+                <ArrowLeft className="w-5 h-5" />
+              </Button>
+              <h2 className="text-xl font-bold">
+                {selectedCategory === "自定义" ? "自定义类别" : "积分原因"}
+              </h2>
+            </div>
+            
+            <div className="space-y-4">
+              {selectedCategory === "自定义" && (
+                <div className="space-y-2">
+                  <Label htmlFor="customCategory">类别名称</Label>
+                  <Input
+                    id="customCategory"
+                    placeholder="请输入自定义类别"
+                    value={customCategory}
+                    onChange={(e) => setCustomCategory(e.target.value)}
+                    className="bg-white/50"
+                  />
+                </div>
+              )}
+              
+              <div className="space-y-2">
+                <Label htmlFor="description">积分原因</Label>
+                <Textarea
+                  id="description"
+                  placeholder={`请输入${pointType === "add" ? "获得" : "扣除"}积分的原因`}
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  className="bg-white/50 resize-none"
+                  rows={3}
+                />
+              </div>
+              
+              <div className="flex justify-end">
+                <Button 
+                  onClick={handleDescriptionSubmit}
+                  disabled={
+                    !description.trim() || 
+                    (selectedCategory === "自定义" && !customCategory.trim())
+                  }
+                >
+                  确认
+                </Button>
+              </div>
+            </div>
+          </div>
+        );
+        
+      case "confirmation":
+        return (
+          <div className="space-y-4">
+            <div className="flex items-center mb-4">
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={handleBackButton}
+                className="mr-2"
+              >
+                <ArrowLeft className="w-5 h-5" />
+              </Button>
+              <h2 className="text-xl font-bold">确认积分信息</h2>
+            </div>
+            
+            <Card className="p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-gray-600">学生姓名</span>
+                <span className="font-medium">{student.name}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-gray-600">操作类型</span>
+                <span className={`font-medium ${pointType === "add" ? "text-green-600" : "text-red-600"}`}>
+                  {pointType === "add" ? "添加积分" : "扣除积分"}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-gray-600">积分类别</span>
+                <span className="font-medium">
+                  {selectedCategory === "自定义" ? customCategory : selectedCategory}
+                </span>
+              </div>
+              {selectedCategory === "背诵" && selectedRecitationText && (
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-600">背诵篇目</span>
+                  <span className="font-medium">
+                    {selectedRecitationText === "其他" ? `《${customRecitationText}》` : selectedRecitationText}
+                  </span>
+                </div>
+              )}
+              <div className="flex items-center justify-between">
+                <span className="text-gray-600">积分数量</span>
+                <span className="font-medium">{selectedAmount}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-gray-600">积分原因</span>
+                <span className="font-medium">{description}</span>
+              </div>
+            </Card>
+            
+            <Button 
+              onClick={handleSubmit}
+              className={`w-full ${
+                pointType === "add" 
+                  ? "bg-green-600 hover:bg-green-700" 
+                  : "bg-red-600 hover:bg-red-700"
+              }`}
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? "处理中..." : "确认提交"}
+            </Button>
+          </div>
+        );
+    }
   };
 
   return (
     <div className="glass-card rounded-xl p-4 space-y-4">
       <h3 className="font-medium mb-4">为 {student.name} {pointType === "add" ? "添加" : "扣除"} 积分</h3>
       
-      <div className="space-y-4">
-        <div className="space-y-2">
-          <Label>积分类型</Label>
-          <RadioGroup 
-            value={pointType} 
-            onValueChange={(value) => setPointType(value as "add" | "subtract")}
-            className="flex space-x-4"
-          >
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="add" id="add" />
-              <Label htmlFor="add" className="flex items-center cursor-pointer">
-                <Plus className="w-4 h-4 mr-1 text-green-500" />
-                添加积分
-              </Label>
-            </div>
-            
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="subtract" id="subtract" />
-              <Label htmlFor="subtract" className="flex items-center cursor-pointer">
-                <Minus className="w-4 h-4 mr-1 text-red-500" />
-                扣除积分
-              </Label>
-            </div>
-          </RadioGroup>
-        </div>
-        
-        <div className="space-y-2">
-          <Label>选择积分类别</Label>
-          <div className="grid grid-cols-4 gap-2">
-            {[...POINT_CATEGORIES].map((category) => (
-              <Card 
-                key={category}
-                className={`p-3 cursor-pointer hover:bg-primary/10 transition-colors flex flex-col items-center justify-center gap-1 ${
-                  selectedCategory === category ? "ring-2 ring-primary bg-primary/20" : ""
-                }`}
-                onClick={() => handleCategorySelect(category)}
-              >
-                {getCategoryIcon(category)}
-                <span className="text-xs text-center">{category}</span>
-              </Card>
-            ))}
-          </div>
-        </div>
-
-        {/* Show recitation texts if "背诵" is selected */}
-        {selectedCategory === "背诵" && (
-          <div className="space-y-2">
-            <Label>选择背诵篇目</Label>
-            <div className="grid grid-cols-3 gap-2">
-              {RECITATION_TEXTS.map((text) => (
-                <Card 
-                  key={text}
-                  className={`p-3 cursor-pointer hover:bg-primary/10 transition-colors flex flex-col items-center justify-center gap-1 ${
-                    selectedRecitationText === text ? "ring-2 ring-primary bg-primary/20" : ""
-                  }`}
-                  onClick={() => handleRecitationTextSelect(text)}
-                >
-                  {text === "其他" ? <ListChecks className="w-5 h-5" /> : <BookText className="w-5 h-5" />}
-                  <span className="text-xs text-center">{text}</span>
-                </Card>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Show custom text input if "其他" is selected for recitation */}
-        {selectedCategory === "背诵" && selectedRecitationText === "其他" && (
-          <div className="space-y-2">
-            <Label htmlFor="customRecitationText">自定义背诵篇目</Label>
-            <Input
-              id="customRecitationText"
-              placeholder="请输入背诵篇目名称"
-              value={customRecitationText}
-              onChange={(e) => setCustomRecitationText(e.target.value)}
-              className="bg-white/50"
-            />
-          </div>
-        )}
-
-        {selectedCategory === "自定义" && (
-          <div className="space-y-2">
-            <Label htmlFor="customCategory">自定义类别</Label>
-            <Input
-              id="customCategory"
-              placeholder="请输入自定义类别"
-              value={customCategory}
-              onChange={(e) => setCustomCategory(e.target.value)}
-              className="bg-white/50"
-            />
-          </div>
-        )}
-        
-        <div className="space-y-2">
-          <Label>选择积分数量</Label>
-          <div className="flex space-x-2">
-            {pointValues.map((value) => (
-              <Button
-                key={value}
-                variant="outline"
-                size="lg"
-                className={`w-full h-16 text-xl ${
-                  selectedAmount === value ? "ring-2 ring-primary bg-primary/20" : ""
-                }`}
-                onClick={() => setSelectedAmount(value)}
-              >
-                {value}
-              </Button>
-            ))}
-          </div>
-        </div>
-        
-        <div className="space-y-2">
-          <Label htmlFor="description">积分原因</Label>
-          <Textarea
-            id="description"
-            placeholder={`请输入${pointType === "add" ? "获得" : "扣除"}积分的原因`}
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            className="bg-white/50 resize-none"
-            rows={3}
-          />
-        </div>
-      </div>
-      
-      <Button 
-        type="button"
-        onClick={handleSubmit}
-        className={pointType === "add" ? "w-full bg-green-600 hover:bg-green-700" : "w-full bg-red-600 hover:bg-red-700"} 
-        disabled={isSubmitting || !selectedCategory || !selectedAmount}
-      >
-        {isSubmitting ? "处理中..." : `${pointType === "add" ? "添加" : "扣除"}积分`}
-      </Button>
+      {renderStepContent()}
     </div>
   );
 };
