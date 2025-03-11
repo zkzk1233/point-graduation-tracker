@@ -1,17 +1,22 @@
 
 import { useState, useEffect } from "react";
-import { Student, PointEntry } from "@/types/student";
+import { Student, PointEntry, DEFAULT_POINT_CATEGORIES, DEFAULT_RECITATION_TEXTS } from "@/types/student";
 import { v4 as uuidv4 } from 'uuid';
 import { toast } from "sonner";
 
 const LOCAL_STORAGE_KEY = "student-points-data";
+const CATEGORIES_STORAGE_KEY = "student-points-categories";
+const RECITATION_TEXTS_STORAGE_KEY = "student-points-recitation-texts";
 
 export function useStudentData() {
   const [students, setStudents] = useState<Student[]>([]);
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
+  const [pointCategories, setPointCategories] = useState<string[]>([]);
+  const [recitationTexts, setRecitationTexts] = useState<string[]>([]);
 
   // Load saved data from localStorage
   useEffect(() => {
+    // Load students
     const savedData = localStorage.getItem(LOCAL_STORAGE_KEY);
     if (savedData) {
       try {
@@ -30,12 +35,48 @@ export function useStudentData() {
         console.error("Failed to parse saved data:", error);
       }
     }
+
+    // Load categories
+    const savedCategories = localStorage.getItem(CATEGORIES_STORAGE_KEY);
+    if (savedCategories) {
+      try {
+        setPointCategories(JSON.parse(savedCategories));
+      } catch (error) {
+        console.error("Failed to parse categories:", error);
+        setPointCategories([...DEFAULT_POINT_CATEGORIES]);
+      }
+    } else {
+      setPointCategories([...DEFAULT_POINT_CATEGORIES]);
+    }
+
+    // Load recitation texts
+    const savedTexts = localStorage.getItem(RECITATION_TEXTS_STORAGE_KEY);
+    if (savedTexts) {
+      try {
+        setRecitationTexts(JSON.parse(savedTexts));
+      } catch (error) {
+        console.error("Failed to parse recitation texts:", error);
+        setRecitationTexts([...DEFAULT_RECITATION_TEXTS]);
+      }
+    } else {
+      setRecitationTexts([...DEFAULT_RECITATION_TEXTS]);
+    }
   }, []);
 
   // Save data to localStorage whenever students change
   useEffect(() => {
     localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(students));
   }, [students]);
+
+  // Save categories to localStorage whenever they change
+  useEffect(() => {
+    localStorage.setItem(CATEGORIES_STORAGE_KEY, JSON.stringify(pointCategories));
+  }, [pointCategories]);
+
+  // Save recitation texts to localStorage whenever they change
+  useEffect(() => {
+    localStorage.setItem(RECITATION_TEXTS_STORAGE_KEY, JSON.stringify(recitationTexts));
+  }, [recitationTexts]);
 
   // Find the selected student
   const selectedStudent = students.find(s => s.id === selectedStudentId);
@@ -147,14 +188,113 @@ export function useStudentData() {
     setSelectedStudentId(studentId);
   };
 
+  // Handle adding a new category
+  const handleAddCategory = (category: string) => {
+    if (category.trim() === "") {
+      toast.error("类别名称不能为空");
+      return;
+    }
+    
+    if (pointCategories.includes(category)) {
+      toast.error("类别已存在", {
+        description: "请添加一个不同的类别"
+      });
+      return;
+    }
+    
+    setPointCategories(prev => [...prev, category]);
+    toast.success("添加成功", {
+      description: `已添加类别: ${category}`
+    });
+    return category;
+  };
+
+  // Handle deleting a category
+  const handleDeleteCategory = (category: string) => {
+    // Don't allow deleting if it's used in any student's point history
+    const isUsed = students.some(student => 
+      student.pointsHistory.some(entry => entry.category === category)
+    );
+    
+    if (isUsed) {
+      toast.error("无法删除", {
+        description: "此类别已被使用，不能删除"
+      });
+      return;
+    }
+    
+    setPointCategories(prev => prev.filter(c => c !== category));
+    toast.success("已删除类别", {
+      description: `类别 ${category} 已删除`
+    });
+  };
+
+  // Handle adding a new recitation text
+  const handleAddRecitationText = (text: string) => {
+    if (text.trim() === "") {
+      toast.error("篇目名称不能为空");
+      return;
+    }
+    
+    // Format with 《》 if not already included
+    let formattedText = text.trim();
+    if (!formattedText.startsWith("《")) {
+      formattedText = `《${formattedText}`;
+    }
+    if (!formattedText.endsWith("》")) {
+      formattedText = `${formattedText}》`;
+    }
+    
+    if (recitationTexts.includes(formattedText)) {
+      toast.error("篇目已存在", {
+        description: "请添加一个不同的篇目"
+      });
+      return;
+    }
+    
+    setRecitationTexts(prev => [...prev, formattedText]);
+    toast.success("添加成功", {
+      description: `已添加篇目: ${formattedText}`
+    });
+    return formattedText;
+  };
+
+  // Handle deleting a recitation text
+  const handleDeleteRecitationText = (text: string) => {
+    // Don't allow deleting if the text appears in any description
+    const isUsed = students.some(student => 
+      student.pointsHistory.some(entry => 
+        entry.description.includes(text)
+      )
+    );
+    
+    if (isUsed) {
+      toast.error("无法删除", {
+        description: "此篇目已被使用，不能删除"
+      });
+      return;
+    }
+    
+    setRecitationTexts(prev => prev.filter(t => t !== text));
+    toast.success("已删除篇目", {
+      description: `篇目 ${text} 已删除`
+    });
+  };
+
   return {
     students,
     selectedStudent,
     selectedStudentId,
+    pointCategories,
+    recitationTexts,
     handleAddStudent,
     handleDeleteStudent,
     handleUpdateAvatar,
     handleAddPoints,
     handleSelectStudent,
+    handleAddCategory,
+    handleDeleteCategory,
+    handleAddRecitationText,
+    handleDeleteRecitationText
   };
 }

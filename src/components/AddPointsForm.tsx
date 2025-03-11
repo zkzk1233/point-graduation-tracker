@@ -1,6 +1,6 @@
 
 import React, { useState } from "react";
-import { Student, POINT_CATEGORIES } from "@/types/student";
+import { Student } from "@/types/student";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -19,14 +19,32 @@ import {
   BookA,
   ListChecks,
   ArrowLeft,
-  Check
+  Check,
+  Edit,
+  Trash2,
+  PlusCircle
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogHeader, 
+  DialogTitle, 
+  DialogTrigger,
+  DialogFooter,
+  DialogClose
+} from "@/components/ui/dialog";
 
 interface AddPointsFormProps {
   student: Student;
   onAddPoints: (studentId: string, amount: number, description: string, category: string) => void;
+  pointCategories: string[];
+  recitationTexts: string[];
+  onAddCategory: (category: string) => void;
+  onDeleteCategory: (category: string) => void;
+  onAddRecitationText: (text: string) => void;
+  onDeleteRecitationText: (text: string) => void;
 }
 
 // Define step types
@@ -34,21 +52,16 @@ type Step = "pointType" | "category" | "recitationText" | "customText" | "pointA
 
 const pointValues = [1, 2, 3];
 
-// Define recitation subcategories
-const RECITATION_TEXTS = [
-  "《回延安》",
-  "《桃花源记》",
-  "《小石潭记》",
-  "《关雎》",
-  "《蒹葭》",
-  "《式微》",
-  "《子衿》",
-  "《送杜少府之任蜀州》",
-  "《望洞庭湖赠张丞相》",
-  "其他" // Option to add more
-];
-
-const AddPointsForm: React.FC<AddPointsFormProps> = ({ student, onAddPoints }) => {
+const AddPointsForm: React.FC<AddPointsFormProps> = ({ 
+  student, 
+  onAddPoints,
+  pointCategories,
+  recitationTexts,
+  onAddCategory,
+  onDeleteCategory,
+  onAddRecitationText,
+  onDeleteRecitationText
+}) => {
   // Current step in the workflow
   const [currentStep, setCurrentStep] = useState<Step>("pointType");
   
@@ -61,6 +74,12 @@ const AddPointsForm: React.FC<AddPointsFormProps> = ({ student, onAddPoints }) =
   const [selectedAmount, setSelectedAmount] = useState<number | null>(null);
   const [description, setDescription] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // State for adding new categories and texts
+  const [newCategory, setNewCategory] = useState("");
+  const [newRecitationText, setNewRecitationText] = useState("");
+  const [isCategoryDialogOpen, setIsCategoryDialogOpen] = useState(false);
+  const [isRecitationTextDialogOpen, setIsRecitationTextDialogOpen] = useState(false);
 
   const getCategoryIcon = (cat: string) => {
     switch (cat) {
@@ -71,7 +90,7 @@ const AddPointsForm: React.FC<AddPointsFormProps> = ({ student, onAddPoints }) =
       case "名著过关": return <GraduationCap className="w-5 h-5" />;
       case "课堂小测": return <PenTool className="w-5 h-5" />;
       case "自定义": return <Pencil className="w-5 h-5" />;
-      default: return null;
+      default: return <BookText className="w-5 h-5" />;
     }
   };
 
@@ -237,6 +256,26 @@ const AddPointsForm: React.FC<AddPointsFormProps> = ({ student, onAddPoints }) =
     }, 300);
   };
 
+  const handleAddNewCategory = () => {
+    if (newCategory.trim()) {
+      onAddCategory(newCategory.trim());
+      setNewCategory("");
+      setIsCategoryDialogOpen(false);
+    } else {
+      toast.error("类别名称不能为空");
+    }
+  };
+
+  const handleAddNewRecitationText = () => {
+    if (newRecitationText.trim()) {
+      onAddRecitationText(newRecitationText.trim());
+      setNewRecitationText("");
+      setIsRecitationTextDialogOpen(false);
+    } else {
+      toast.error("篇目名称不能为空");
+    }
+  };
+
   // Render different views based on current step
   const renderStepContent = () => {
     switch (currentStep) {
@@ -275,31 +314,79 @@ const AddPointsForm: React.FC<AddPointsFormProps> = ({ student, onAddPoints }) =
       case "category":
         return (
           <div className="space-y-4">
-            <div className="flex items-center mb-4">
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                onClick={handleBackButton}
-                className="mr-2"
-              >
-                <ArrowLeft className="w-5 h-5" />
-              </Button>
-              <h2 className="text-xl font-bold">选择积分类别</h2>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center">
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  onClick={handleBackButton}
+                  className="mr-2"
+                >
+                  <ArrowLeft className="w-5 h-5" />
+                </Button>
+                <h2 className="text-xl font-bold">选择积分类别</h2>
+              </div>
+              <Dialog open={isCategoryDialogOpen} onOpenChange={setIsCategoryDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    <PlusCircle className="w-4 h-4 mr-1" />
+                    添加类别
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>添加新类别</DialogTitle>
+                  </DialogHeader>
+                  <div className="py-4">
+                    <Label htmlFor="newCategory">类别名称</Label>
+                    <Input
+                      id="newCategory"
+                      value={newCategory}
+                      onChange={(e) => setNewCategory(e.target.value)}
+                      placeholder="请输入新类别"
+                      className="mt-2"
+                    />
+                  </div>
+                  <DialogFooter>
+                    <DialogClose asChild>
+                      <Button variant="outline">取消</Button>
+                    </DialogClose>
+                    <Button onClick={handleAddNewCategory}>添加</Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
             </div>
             
             <div className="grid grid-cols-2 gap-3">
-              {[...POINT_CATEGORIES].map((category) => (
+              {pointCategories.map((category) => (
                 <Card 
                   key={category}
                   className={`p-4 cursor-pointer hover:bg-primary/10 transition-colors flex flex-col items-center justify-center gap-2 ${
                     selectedCategory === category ? "ring-2 ring-primary bg-primary/20" : ""
                   }`}
-                  onClick={() => handleCategorySelect(category)}
                 >
-                  <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center">
-                    {getCategoryIcon(category)}
+                  <div className="flex w-full justify-end">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onDeleteCategory(category);
+                      }}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
                   </div>
-                  <span className="text-center font-medium">{category}</span>
+                  <div 
+                    className="flex flex-col items-center justify-center flex-1 w-full"
+                    onClick={() => handleCategorySelect(category)}
+                  >
+                    <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center">
+                      {getCategoryIcon(category)}
+                    </div>
+                    <span className="text-center font-medium mt-2">{category}</span>
+                  </div>
                 </Card>
               ))}
             </div>
@@ -309,31 +396,81 @@ const AddPointsForm: React.FC<AddPointsFormProps> = ({ student, onAddPoints }) =
       case "recitationText":
         return (
           <div className="space-y-4">
-            <div className="flex items-center mb-4">
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                onClick={handleBackButton}
-                className="mr-2"
-              >
-                <ArrowLeft className="w-5 h-5" />
-              </Button>
-              <h2 className="text-xl font-bold">选择背诵篇目</h2>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center">
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  onClick={handleBackButton}
+                  className="mr-2"
+                >
+                  <ArrowLeft className="w-5 h-5" />
+                </Button>
+                <h2 className="text-xl font-bold">选择背诵篇目</h2>
+              </div>
+              <Dialog open={isRecitationTextDialogOpen} onOpenChange={setIsRecitationTextDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    <PlusCircle className="w-4 h-4 mr-1" />
+                    添加篇目
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>添加新篇目</DialogTitle>
+                  </DialogHeader>
+                  <div className="py-4">
+                    <Label htmlFor="newRecitationText">篇目名称</Label>
+                    <Input
+                      id="newRecitationText"
+                      value={newRecitationText}
+                      onChange={(e) => setNewRecitationText(e.target.value)}
+                      placeholder="请输入新篇目"
+                      className="mt-2"
+                    />
+                  </div>
+                  <DialogFooter>
+                    <DialogClose asChild>
+                      <Button variant="outline">取消</Button>
+                    </DialogClose>
+                    <Button onClick={handleAddNewRecitationText}>添加</Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
             </div>
             
             <div className="grid grid-cols-2 gap-3">
-              {RECITATION_TEXTS.map((text) => (
+              {[...recitationTexts, "其他"].map((text) => (
                 <Card 
                   key={text}
                   className={`p-4 cursor-pointer hover:bg-primary/10 transition-colors flex flex-col items-center justify-center gap-2 ${
                     selectedRecitationText === text ? "ring-2 ring-primary bg-primary/20" : ""
                   }`}
-                  onClick={() => handleRecitationTextSelect(text)}
                 >
-                  <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center">
-                    {text === "其他" ? <ListChecks className="w-5 h-5" /> : <BookText className="w-5 h-5" />}
+                  {text !== "其他" && (
+                    <div className="flex w-full justify-end">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onDeleteRecitationText(text);
+                        }}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  )}
+                  <div 
+                    className="flex flex-col items-center justify-center flex-1 w-full"
+                    onClick={() => handleRecitationTextSelect(text)}
+                  >
+                    <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center">
+                      {text === "其他" ? <ListChecks className="w-5 h-5" /> : <BookText className="w-5 h-5" />}
+                    </div>
+                    <span className="text-center text-sm font-medium mt-2">{text}</span>
                   </div>
-                  <span className="text-center text-sm font-medium">{text}</span>
                 </Card>
               ))}
             </div>

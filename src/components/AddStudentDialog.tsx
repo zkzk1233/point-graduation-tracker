@@ -3,7 +3,7 @@ import React, { useState } from "react";
 import AddStudentForm from "@/components/AddStudentForm";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Plus } from "lucide-react";
+import { Plus, Settings } from "lucide-react";
 
 interface AddStudentDialogProps {
   onAddStudent: (name: string, studentId: string) => void;

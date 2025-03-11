@@ -11,11 +11,17 @@ const Index = () => {
     students,
     selectedStudent,
     selectedStudentId,
+    pointCategories,
+    recitationTexts,
     handleAddStudent,
     handleDeleteStudent,
     handleUpdateAvatar,
     handleAddPoints,
     handleSelectStudent,
+    handleAddCategory,
+    handleDeleteCategory,
+    handleAddRecitationText,
+    handleDeleteRecitationText
   } = useStudentData();
   
   const [activeTab, setActiveTab] = useState<string>("avatars");
@@ -48,6 +54,12 @@ const Index = () => {
             onDeleteStudent={handleDeleteStudent}
             onUpdateAvatar={handleUpdateAvatar}
             onAddPoints={handleAddPoints}
+            pointCategories={pointCategories}
+            recitationTexts={recitationTexts}
+            onAddCategory={handleAddCategory}
+            onDeleteCategory={handleDeleteCategory}
+            onAddRecitationText={handleAddRecitationText}
+            onDeleteRecitationText={handleDeleteRecitationText}
           />
         </div>
 
@@ -56,10 +68,16 @@ const Index = () => {
           students={students}
           selectedStudentId={selectedStudentId}
           selectedStudent={selectedStudent}
+          pointCategories={pointCategories}
+          recitationTexts={recitationTexts}
           onSelectStudent={handleSelectStudent}
           onDeleteStudent={handleDeleteStudent}
           onUpdateAvatar={handleUpdateAvatar}
           onAddPoints={handleAddPoints}
+          onAddCategory={handleAddCategory}
+          onDeleteCategory={handleDeleteCategory}
+          onAddRecitationText={handleAddRecitationText}
+          onDeleteRecitationText={handleDeleteRecitationText}
         />
       </div>
     </div>
