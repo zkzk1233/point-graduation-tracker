@@ -2,8 +2,7 @@
 import React, { useState, useRef } from "react";
 import { Student } from "@/types/student";
 import { Input } from "@/components/ui/input";
-import { Search, GraduationCap, UserCircle, Trash2, Upload, Plus } from "lucide-react";
-import { getRank } from "@/utils/rankUtils";
+import { Search, GraduationCap, Trash2, Upload } from "lucide-react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { 
@@ -110,88 +109,82 @@ const StudentList: React.FC<StudentListProps> = ({
       
       {filteredStudents.length > 0 ? (
         <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-8 gap-3 mt-4">
-          {filteredStudents.map(student => {
-            const rank = getRank(student.totalPoints);
-            return (
-              <TooltipProvider key={student.id}>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <div className="relative group">
-                      <button
-                        onClick={() => onSelectStudent(student.id)}
-                        className={`flex flex-col items-center space-y-2 p-2 rounded-lg transition-all duration-200 hover:bg-primary/10 ${
-                          selectedStudentId === student.id ? 'bg-primary/20 ring-2 ring-primary' : ''
-                        }`}
+          {filteredStudents.map(student => (
+            <TooltipProvider key={student.id}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="relative group">
+                    <button
+                      onClick={() => onSelectStudent(student.id)}
+                      className={`flex flex-col items-center space-y-2 p-2 rounded-lg transition-all duration-200 hover:bg-primary/10 ${
+                        selectedStudentId === student.id ? 'bg-primary/20 ring-2 ring-primary' : ''
+                      }`}
+                    >
+                      <div className={`relative ${selectedStudentId === student.id ? 'scale-110' : ''}`}>
+                        <Avatar className="w-16 h-16 border-2 border-primary">
+                          <AvatarImage src={student.avatar} alt={student.name} />
+                          <AvatarFallback className="bg-primary/20 text-primary">
+                            {student.name.substring(0, 2)}
+                          </AvatarFallback>
+                        </Avatar>
+                      </div>
+                      <span className="text-xs font-medium text-center truncate w-full">
+                        {student.name}
+                      </span>
+                    </button>
+                    
+                    {/* Avatar upload and delete options */}
+                    <div className="absolute top-0 right-0 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col gap-1">
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleAvatarUpload(student.id);
+                        }}
+                        className="w-8 h-8 bg-blue-500 text-white rounded-full flex items-center justify-center shadow-md hover:bg-blue-600"
+                        title="更新头像"
                       >
-                        <div className={`relative ${selectedStudentId === student.id ? 'scale-110' : ''}`}>
-                          <Avatar className="w-16 h-16 border-2" style={{ borderColor: rank.color.replace('bg-', '') }}>
-                            <AvatarImage src={student.avatar} alt={student.name} />
-                            <AvatarFallback className={rank.color + ' ' + rank.textColor}>
-                              {student.name.substring(0, 2)}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div className="absolute -bottom-1 -right-1 text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center bg-white shadow-sm">
-                            {student.totalPoints}
-                          </div>
-                        </div>
-                        <span className="text-xs font-medium text-center truncate w-full">
-                          {student.name}
-                        </span>
+                        <Upload size={14} />
                       </button>
                       
-                      {/* Avatar upload and delete options */}
-                      <div className="absolute top-0 right-0 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col gap-1">
-                        <button 
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleAvatarUpload(student.id);
-                          }}
-                          className="w-8 h-8 bg-blue-500 text-white rounded-full flex items-center justify-center shadow-md hover:bg-blue-600"
-                          title="更新头像"
-                        >
-                          <Upload size={14} />
-                        </button>
-                        
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <button 
-                              onClick={(e) => e.stopPropagation()}
-                              className="w-8 h-8 bg-red-500 text-white rounded-full flex items-center justify-center shadow-md hover:bg-red-600"
-                              title="删除学生"
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <button 
+                            onClick={(e) => e.stopPropagation()}
+                            className="w-8 h-8 bg-red-500 text-white rounded-full flex items-center justify-center shadow-md hover:bg-red-600"
+                            title="删除学生"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>确认删除学生</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              您确定要删除 {student.name} 吗？此操作将永久删除该学生及其所有背诵记录，无法恢复。
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>取消</AlertDialogCancel>
+                            <AlertDialogAction 
+                              onClick={() => onDeleteStudent(student.id)}
+                              className="bg-red-500 hover:bg-red-600"
                             >
-                              <Trash2 size={14} />
-                            </button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>确认删除学生</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                您确定要删除 {student.name} 吗？此操作将永久删除该学生及其所有积分记录，无法恢复。
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>取消</AlertDialogCancel>
-                              <AlertDialogAction 
-                                onClick={() => onDeleteStudent(student.id)}
-                                className="bg-red-500 hover:bg-red-600"
-                              >
-                                删除
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                      </div>
+                              删除
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
                     </div>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>{student.name}</p>
-                    <p className="text-xs text-muted-foreground">学号: {student.studentId}</p>
-                    <p className="text-xs">积分: {student.totalPoints}</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            );
-          })}
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>{student.name}</p>
+                  <p className="text-xs text-muted-foreground">学号: {student.studentId}</p>
+                  <p className="text-xs">背诵篇目: {student.recitations.length} 个</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          ))}
 
           {/* Add student button */}
           {students.length < 40 && (

@@ -1,16 +1,15 @@
+
 import { useState, useEffect } from "react";
-import { Student, PointEntry, RecitationEntry, DEFAULT_POINT_CATEGORIES, DEFAULT_RECITATION_TEXTS } from "@/types/student";
+import { Student, RecitationEntry, DEFAULT_RECITATION_TEXTS } from "@/types/student";
 import { v4 as uuidv4 } from 'uuid';
 import { toast } from "sonner";
 
-const LOCAL_STORAGE_KEY = "student-points-data";
-const CATEGORIES_STORAGE_KEY = "student-points-categories";
-const RECITATION_TEXTS_STORAGE_KEY = "student-points-recitation-texts";
+const LOCAL_STORAGE_KEY = "student-recitation-data";
+const RECITATION_TEXTS_STORAGE_KEY = "student-recitation-texts";
 
 export function useStudentData() {
   const [students, setStudents] = useState<Student[]>([]);
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
-  const [pointCategories, setPointCategories] = useState<string[]>([]);
   const [recitationTexts, setRecitationTexts] = useState<string[]>([]);
 
   // Load saved data from localStorage
@@ -24,12 +23,6 @@ export function useStudentData() {
         const studentsWithDates = parsedData.map((student: any) => ({
           ...student,
           avatar: student.avatar || "", // Ensure avatar exists
-          recitations: student.recitations || [], // Ensure recitations array exists
-          pointsHistory: student.pointsHistory.map((entry: any) => ({
-            ...entry,
-            timestamp: new Date(entry.timestamp)
-          })),
-          // Convert recitation timestamps if they exist
           recitations: student.recitations 
             ? student.recitations.map((entry: any) => ({
                 ...entry,
@@ -41,19 +34,6 @@ export function useStudentData() {
       } catch (error) {
         console.error("Failed to parse saved data:", error);
       }
-    }
-
-    // Load categories
-    const savedCategories = localStorage.getItem(CATEGORIES_STORAGE_KEY);
-    if (savedCategories) {
-      try {
-        setPointCategories(JSON.parse(savedCategories));
-      } catch (error) {
-        console.error("Failed to parse categories:", error);
-        setPointCategories([...DEFAULT_POINT_CATEGORIES]);
-      }
-    } else {
-      setPointCategories([...DEFAULT_POINT_CATEGORIES]);
     }
 
     // Load recitation texts
@@ -74,11 +54,6 @@ export function useStudentData() {
   useEffect(() => {
     localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(students));
   }, [students]);
-
-  // Save categories to localStorage whenever they change
-  useEffect(() => {
-    localStorage.setItem(CATEGORIES_STORAGE_KEY, JSON.stringify(pointCategories));
-  }, [pointCategories]);
 
   // Save recitation texts to localStorage whenever they change
   useEffect(() => {
@@ -107,8 +82,6 @@ export function useStudentData() {
       name,
       studentId,
       avatar: avatarUrl,
-      totalPoints: 0,
-      pointsHistory: [],
       recitations: []
     };
 
@@ -154,50 +127,17 @@ export function useStudentData() {
     );
   };
 
-  // Handle adding points to a student
-  const handleAddPoints = (studentId: string, amount: number, description: string, category: string = "") => {
-    const newPointEntry: PointEntry = {
-      id: uuidv4(),
-      amount,
-      description,
-      category: category || "一般活动", // Use category or default if not provided
-      timestamp: new Date()
-    };
-
-    setStudents(prev => 
-      prev.map(student => {
-        if (student.id === studentId) {
-          return {
-            ...student,
-            totalPoints: student.totalPoints + amount,
-            pointsHistory: [newPointEntry, ...student.pointsHistory]
-          };
-        }
-        return student;
-      })
-    );
-    
-    const student = students.find(s => s.id === studentId);
-    if (student) {
-      toast.success(`积分已记录`, {
-        description: `${student.name}: ${amount > 0 ? '+' : ''}${amount} 分 (${category || "一般活动"})`
-      });
-    }
-  };
-
   // Handle recording a recitation
   const handleRecordRecitation = (
     studentId: string, 
     textId: string, 
     status: 'completed' | 'incomplete',
-    points: number,
     notes: string = ""
   ) => {
     const newRecitationEntry: RecitationEntry = {
       id: uuidv4(),
       textId,
       status,
-      points,
       notes,
       timestamp: new Date()
     };
@@ -217,28 +157,8 @@ export function useStudentData() {
             newRecitations = [newRecitationEntry, ...newRecitations];
           }
           
-          // Also add points if completed
-          let newTotalPoints = student.totalPoints;
-          let newPointsHistory = [...student.pointsHistory];
-          
-          if (status === 'completed' && points > 0) {
-            newTotalPoints += points;
-            
-            const pointEntry: PointEntry = {
-              id: uuidv4(),
-              amount: points,
-              description: `背诵${textId}`,
-              category: "背诵",
-              timestamp: new Date()
-            };
-            
-            newPointsHistory = [pointEntry, ...newPointsHistory];
-          }
-          
           return {
             ...student,
-            totalPoints: newTotalPoints,
-            pointsHistory: newPointsHistory,
             recitations: newRecitations
           };
         }
@@ -254,14 +174,6 @@ export function useStudentData() {
     }
   };
 
-  // Get recitation status for a student and text
-  const getRecitationStatus = (studentId: string, textId: string) => {
-    const student = students.find(s => s.id === studentId);
-    if (!student) return null;
-    
-    return student.recitations.find(r => r.textId === textId) || null;
-  };
-
   // Handle selecting a student
   const handleSelectStudent = (studentId: string) => {
     // Toggle selection if clicking the same student
@@ -271,47 +183,6 @@ export function useStudentData() {
     }
     
     setSelectedStudentId(studentId);
-  };
-
-  // Handle adding a new category
-  const handleAddCategory = (category: string) => {
-    if (category.trim() === "") {
-      toast.error("类别名称不能为空");
-      return;
-    }
-    
-    if (pointCategories.includes(category)) {
-      toast.error("类别已存在", {
-        description: "请添加一个不同的类别"
-      });
-      return;
-    }
-    
-    setPointCategories(prev => [...prev, category]);
-    toast.success("添加成功", {
-      description: `已添加类别: ${category}`
-    });
-    return category;
-  };
-
-  // Handle deleting a category
-  const handleDeleteCategory = (category: string) => {
-    // Don't allow deleting if it's used in any student's point history
-    const isUsed = students.some(student => 
-      student.pointsHistory.some(entry => entry.category === category)
-    );
-    
-    if (isUsed) {
-      toast.error("无法删除", {
-        description: "此类别已被使用，不能删除"
-      });
-      return;
-    }
-    
-    setPointCategories(prev => prev.filter(c => c !== category));
-    toast.success("已删除类别", {
-      description: `类别 ${category} 已删除`
-    });
   };
 
   // Handle adding a new recitation text
@@ -346,11 +217,9 @@ export function useStudentData() {
 
   // Handle deleting a recitation text
   const handleDeleteRecitationText = (text: string) => {
-    // Don't allow deleting if the text appears in any description
+    // Don't allow deleting if the text appears in any student recitations
     const isUsed = students.some(student => 
-      student.pointsHistory.some(entry => 
-        entry.description.includes(text)
-      )
+      student.recitations.some(entry => entry.textId === text)
     );
     
     if (isUsed) {
@@ -370,18 +239,13 @@ export function useStudentData() {
     students,
     selectedStudent,
     selectedStudentId,
-    pointCategories,
     recitationTexts,
     handleAddStudent,
     handleDeleteStudent,
     handleUpdateAvatar,
-    handleAddPoints,
     handleSelectStudent,
-    handleAddCategory,
-    handleDeleteCategory,
     handleAddRecitationText,
     handleDeleteRecitationText,
-    handleRecordRecitation,
-    getRecitationStatus
+    handleRecordRecitation
   };
 }

@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { PlusCircle, BookCheck, BookX, ArrowLeft, Check, X, Edit, Trash2 } from "lucide-react";
+import { PlusCircle, BookCheck, BookX, ArrowLeft, Check, X, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 
@@ -20,7 +20,6 @@ interface RecitationTrackerProps {
     studentId: string,
     textId: string,
     status: 'completed' | 'incomplete',
-    points: number,
     notes: string
   ) => void;
 }
@@ -36,7 +35,6 @@ const RecitationTracker: React.FC<RecitationTrackerProps> = ({
   const [newRecitationText, setNewRecitationText] = useState("");
   const [selectedText, setSelectedText] = useState<string | null>(null);
   const [status, setStatus] = useState<'completed' | 'incomplete'>('completed');
-  const [points, setPoints] = useState(1);
   const [notes, setNotes] = useState("");
   const [isDetailMode, setIsDetailMode] = useState(false);
 
@@ -57,12 +55,10 @@ const RecitationTracker: React.FC<RecitationTrackerProps> = ({
     const existingRecord = student.recitations.find(r => r.textId === text);
     if (existingRecord) {
       setStatus(existingRecord.status);
-      setPoints(existingRecord.points);
       setNotes(existingRecord.notes);
     } else {
       // Default values for new record
       setStatus('completed');
-      setPoints(1);
       setNotes("");
     }
     
@@ -76,7 +72,6 @@ const RecitationTracker: React.FC<RecitationTrackerProps> = ({
       student.id,
       selectedText,
       status,
-      status === 'completed' ? points : 0,
       notes
     );
     
@@ -217,24 +212,6 @@ const RecitationTracker: React.FC<RecitationTrackerProps> = ({
                 未完成
               </Button>
             </div>
-
-            {status === 'completed' && (
-              <div className="space-y-2">
-                <Label htmlFor="points">积分奖励</Label>
-                <div className="flex gap-2">
-                  {[1, 2, 3].map(value => (
-                    <Button
-                      key={value}
-                      type="button"
-                      variant={points === value ? "default" : "outline"}
-                      onClick={() => setPoints(value)}
-                    >
-                      {value}
-                    </Button>
-                  ))}
-                </div>
-              </div>
-            )}
 
             <div className="space-y-2">
               <Label htmlFor="notes">备注</Label>
