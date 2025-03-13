@@ -1,6 +1,6 @@
 
 import React from "react";
-import { Student } from "@/types/student";
+import { Student, RecitationCategory } from "@/types/student";
 import StudentList from "@/components/StudentList";
 import RecitationTracker from "@/components/RecitationTracker";
 
@@ -9,11 +9,15 @@ interface DesktopViewProps {
   selectedStudentId: string | null;
   selectedStudent: Student | undefined;
   recitationTexts: string[];
+  categories: RecitationCategory[];
+  selectedCategoryId: string | null;
   onSelectStudent: (studentId: string) => void;
   onDeleteStudent: (studentId: string) => void;
   onUpdateAvatar: (studentId: string, newAvatar: string) => void;
-  onAddRecitationText: (text: string) => string | undefined;
+  onAddRecitationText: (text: string, categoryId?: string) => string | undefined;
   onDeleteRecitationText: (text: string) => void;
+  onAddCategory: (name: string) => RecitationCategory | undefined;
+  onSelectCategory: (categoryId: string | null) => void;
   onRecordRecitation: (
     studentId: string,
     textId: string,
@@ -27,11 +31,15 @@ const DesktopView: React.FC<DesktopViewProps> = ({
   selectedStudentId,
   selectedStudent,
   recitationTexts,
+  categories,
+  selectedCategoryId,
   onSelectStudent,
   onDeleteStudent,
   onUpdateAvatar,
   onAddRecitationText,
   onDeleteRecitationText,
+  onAddCategory,
+  onSelectCategory,
   onRecordRecitation
 }) => {
   return (
@@ -52,8 +60,12 @@ const DesktopView: React.FC<DesktopViewProps> = ({
               <RecitationTracker
                 student={selectedStudent}
                 recitationTexts={recitationTexts}
+                categories={categories}
+                selectedCategoryId={selectedCategoryId}
                 onAddRecitationText={onAddRecitationText}
                 onDeleteRecitationText={onDeleteRecitationText}
+                onAddCategory={onAddCategory}
+                onSelectCategory={onSelectCategory}
                 onRecordRecitation={onRecordRecitation}
               />
             </div>

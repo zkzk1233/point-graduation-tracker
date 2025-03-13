@@ -1,22 +1,11 @@
 
 import React, { useState } from "react";
-import { Student, RecitationEntry, RecitationCategory } from "@/types/student";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { PlusCircle, BookCheck, BookX, ArrowLeft, Check, X, Trash2, FolderPlus, Tag, ChevronDown } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { Student, RecitationCategory } from "@/types/student";
 import { toast } from "sonner";
-import { 
-  DropdownMenu, 
-  DropdownMenuTrigger, 
-  DropdownMenuContent, 
-  DropdownMenuItem,
-  DropdownMenuSeparator 
-} from "@/components/ui/dropdown-menu";
+import RecitationTextGrid from "./recitation/RecitationTextGrid";
+import CategorySelector from "./recitation/CategorySelector";
+import { AddTextDialog, AddCategoryDialog } from "./recitation/RecitationDialogs";
+import RecitationDetailView from "./recitation/RecitationDetailView";
 
 interface RecitationTrackerProps {
   student: Student;
@@ -117,10 +106,6 @@ const RecitationTracker: React.FC<RecitationTrackerProps> = ({
     return student.recitations.find(r => r.textId === text)?.status || null;
   };
 
-  const selectedCategory = selectedCategoryId 
-    ? categories.find(c => c.id === selectedCategoryId) 
-    : null;
-
   return (
     <div className="glass-card rounded-xl p-4 space-y-4">
       <h3 className="font-medium mb-4">
@@ -132,199 +117,53 @@ const RecitationTracker: React.FC<RecitationTrackerProps> = ({
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-bold">选择篇目</h2>
             <div className="flex gap-2">
-              {/* Category Dropdown */}
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm">
-                    <Tag className="w-4 h-4 mr-1" />
-                    {selectedCategory ? selectedCategory.name : "所有类别"}
-                    <ChevronDown className="w-4 h-4 ml-1" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent className="w-56 bg-white" align="end">
-                  <DropdownMenuItem 
-                    onClick={() => onSelectCategory(null)}
-                    className={selectedCategoryId === null ? "bg-primary/10" : ""}
-                  >
-                    所有类别
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  {categories.map(category => (
-                    <DropdownMenuItem 
-                      key={category.id}
-                      onClick={() => onSelectCategory(category.id)}
-                      className={selectedCategoryId === category.id ? "bg-primary/10" : ""}
-                    >
-                      {category.name}
-                    </DropdownMenuItem>
-                  ))}
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => setIsCategoryDialogOpen(true)}>
-                    <FolderPlus className="w-4 h-4 mr-2" />
-                    添加新类别
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              {/* Category Selector */}
+              <CategorySelector 
+                categories={categories}
+                selectedCategoryId={selectedCategoryId}
+                onSelectCategory={onSelectCategory}
+                onAddCategoryClick={() => setIsCategoryDialogOpen(true)}
+              />
 
-              {/* Add Text Button */}
-              <Dialog open={isTextDialogOpen} onOpenChange={setIsTextDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button variant="outline" size="sm">
-                    <PlusCircle className="w-4 h-4 mr-1" />
-                    添加篇目
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>添加新篇目</DialogTitle>
-                  </DialogHeader>
-                  <div className="py-4">
-                    <Label htmlFor="newRecitationText">篇目名称</Label>
-                    <Input
-                      id="newRecitationText"
-                      value={newRecitationText}
-                      onChange={(e) => setNewRecitationText(e.target.value)}
-                      placeholder="请输入新篇目"
-                      className="mt-2"
-                    />
-                  </div>
-                  <DialogFooter>
-                    <DialogClose asChild>
-                      <Button variant="outline">取消</Button>
-                    </DialogClose>
-                    <Button onClick={handleAddNewText}>添加</Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
+              {/* Add Text Dialog */}
+              <AddTextDialog 
+                isOpen={isTextDialogOpen}
+                onOpenChange={setIsTextDialogOpen}
+                newText={newRecitationText}
+                onTextChange={setNewRecitationText}
+                onAddText={handleAddNewText}
+              />
             </div>
           </div>
 
           {/* Add Category Dialog */}
-          <Dialog open={isCategoryDialogOpen} onOpenChange={setIsCategoryDialogOpen}>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>添加新类别</DialogTitle>
-              </DialogHeader>
-              <div className="py-4">
-                <Label htmlFor="newCategoryName">类别名称</Label>
-                <Input
-                  id="newCategoryName"
-                  value={newCategoryName}
-                  onChange={(e) => setNewCategoryName(e.target.value)}
-                  placeholder="请输入新类别名称"
-                  className="mt-2"
-                />
-              </div>
-              <DialogFooter>
-                <DialogClose asChild>
-                  <Button variant="outline">取消</Button>
-                </DialogClose>
-                <Button onClick={handleAddNewCategory}>添加</Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+          <AddCategoryDialog 
+            isOpen={isCategoryDialogOpen}
+            onOpenChange={setIsCategoryDialogOpen}
+            newCategory={newCategoryName}
+            onCategoryChange={setNewCategoryName}
+            onAddCategory={handleAddNewCategory}
+          />
 
-          <div className="grid grid-cols-2 gap-3">
-            {recitationTexts.map((text) => {
-              const status = getTextStatus(text);
-              return (
-                <Card 
-                  key={text}
-                  className={`p-4 cursor-pointer hover:bg-primary/10 transition-colors flex flex-col items-center justify-center gap-2 ${
-                    selectedText === text ? "ring-2 ring-primary bg-primary/20" : ""
-                  }`}
-                >
-                  <div className="flex w-full justify-end">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-6 w-6"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onDeleteRecitationText(text);
-                      }}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                  <div 
-                    className="flex flex-col items-center justify-center flex-1 w-full"
-                    onClick={() => handleTextSelect(text)}
-                  >
-                    <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center">
-                      {status === 'completed' ? (
-                        <BookCheck className="w-5 h-5 text-green-600" />
-                      ) : status === 'incomplete' ? (
-                        <BookX className="w-5 h-5 text-red-600" />
-                      ) : (
-                        <BookX className="w-5 h-5 text-gray-400" />
-                      )}
-                    </div>
-                    <span className="text-center text-sm font-medium mt-2">{text}</span>
-                    {status && (
-                      <Badge className={status === 'completed' ? "bg-green-500" : "bg-red-500"}>
-                        {status === 'completed' ? '已完成' : '未完成'}
-                      </Badge>
-                    )}
-                  </div>
-                </Card>
-              );
-            })}
-          </div>
+          {/* Text Selection Grid */}
+          <RecitationTextGrid 
+            recitationTexts={recitationTexts}
+            selectedText={selectedText}
+            getTextStatus={getTextStatus}
+            onTextSelect={handleTextSelect}
+            onDeleteText={onDeleteRecitationText}
+          />
         </>
       ) : (
-        <div className="space-y-4">
-          <div className="flex items-center mb-4">
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              onClick={handleBackButton}
-              className="mr-2"
-            >
-              <ArrowLeft className="w-5 h-5" />
-            </Button>
-            <h2 className="text-xl font-bold">背诵状态</h2>
-          </div>
-
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4 mb-4">
-              <Button
-                variant={status === 'completed' ? "default" : "outline"}
-                className={status === 'completed' ? "bg-green-600" : ""}
-                onClick={() => setStatus('completed')}
-              >
-                <Check className="w-5 h-5 mr-2" />
-                已完成
-              </Button>
-              <Button
-                variant={status === 'incomplete' ? "default" : "outline"}
-                className={status === 'incomplete' ? "bg-red-600" : ""}
-                onClick={() => setStatus('incomplete')}
-              >
-                <X className="w-5 h-5 mr-2" />
-                未完成
-              </Button>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="notes">备注</Label>
-              <Textarea
-                id="notes"
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                placeholder="添加备注信息..."
-                rows={3}
-              />
-            </div>
-
-            <Button 
-              onClick={handleSubmit}
-              className={`w-full ${status === 'completed' ? "bg-green-600 hover:bg-green-700" : "bg-red-600 hover:bg-red-700"}`}
-            >
-              保存
-            </Button>
-          </div>
-        </div>
+        <RecitationDetailView 
+          selectedText={selectedText}
+          status={status}
+          notes={notes}
+          onStatusChange={setStatus}
+          onNotesChange={setNotes}
+          onBack={handleBackButton}
+          onSave={handleSubmit}
+        />
       )}
     </div>
   );
