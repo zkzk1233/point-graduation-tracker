@@ -15,6 +15,11 @@ export interface Student {
   recitations: RecitationEntry[];
 }
 
+export interface RecitationCategory {
+  id: string;
+  name: string;
+}
+
 export type RecitationText = string;
 
 // Default recitation texts
@@ -29,3 +34,11 @@ export const DEFAULT_RECITATION_TEXTS = [
   "《送杜少府之任蜀州》",
   "《望洞庭湖赠张丞相》"
 ] as const;
+
+// Default categories
+export const DEFAULT_CATEGORIES: RecitationCategory[] = [
+  { id: "ancient-poetry", name: "古诗" },
+  { id: "modern-poetry", name: "现代诗" },
+  { id: "prose", name: "散文" },
+  { id: "article", name: "文章" }
+];

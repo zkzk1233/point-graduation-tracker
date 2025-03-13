@@ -11,6 +11,8 @@ const Index = () => {
     students,
     selectedStudent,
     selectedStudentId,
+    categories,
+    selectedCategoryId,
     recitationTexts,
     handleAddStudent,
     handleDeleteStudent,
@@ -18,6 +20,8 @@ const Index = () => {
     handleSelectStudent,
     handleAddRecitationText,
     handleDeleteRecitationText,
+    handleAddCategory,
+    handleSelectCategory,
     handleRecordRecitation
   } = useStudentData();
   
@@ -51,8 +55,12 @@ const Index = () => {
             onDeleteStudent={handleDeleteStudent}
             onUpdateAvatar={handleUpdateAvatar}
             recitationTexts={recitationTexts}
+            categories={categories}
+            selectedCategoryId={selectedCategoryId}
             onAddRecitationText={handleAddRecitationText}
             onDeleteRecitationText={handleDeleteRecitationText}
+            onAddCategory={handleAddCategory}
+            onSelectCategory={handleSelectCategory}
             onRecordRecitation={handleRecordRecitation}
           />
         </div>
@@ -63,11 +71,15 @@ const Index = () => {
           selectedStudentId={selectedStudentId}
           selectedStudent={selectedStudent}
           recitationTexts={recitationTexts}
+          categories={categories}
+          selectedCategoryId={selectedCategoryId}
           onSelectStudent={handleSelectStudent}
           onDeleteStudent={handleDeleteStudent}
           onUpdateAvatar={handleUpdateAvatar}
           onAddRecitationText={handleAddRecitationText}
           onDeleteRecitationText={handleDeleteRecitationText}
+          onAddCategory={handleAddCategory}
+          onSelectCategory={handleSelectCategory}
           onRecordRecitation={handleRecordRecitation}
         />
       </div>

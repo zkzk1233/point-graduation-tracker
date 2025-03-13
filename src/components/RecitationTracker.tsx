@@ -1,21 +1,32 @@
 
 import React, { useState } from "react";
-import { Student, RecitationEntry } from "@/types/student";
+import { Student, RecitationEntry, RecitationCategory } from "@/types/student";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { PlusCircle, BookCheck, BookX, ArrowLeft, Check, X, Trash2 } from "lucide-react";
+import { PlusCircle, BookCheck, BookX, ArrowLeft, Check, X, Trash2, FolderPlus, Tag, ChevronDown } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
+import { 
+  DropdownMenu, 
+  DropdownMenuTrigger, 
+  DropdownMenuContent, 
+  DropdownMenuItem,
+  DropdownMenuSeparator 
+} from "@/components/ui/dropdown-menu";
 
 interface RecitationTrackerProps {
   student: Student;
   recitationTexts: string[];
-  onAddRecitationText: (text: string) => string | undefined;
+  categories: RecitationCategory[];
+  selectedCategoryId: string | null;
+  onAddRecitationText: (text: string, categoryId?: string) => string | undefined;
   onDeleteRecitationText: (text: string) => void;
+  onAddCategory: (name: string) => RecitationCategory | undefined;
+  onSelectCategory: (categoryId: string | null) => void;
   onRecordRecitation: (
     studentId: string,
     textId: string,
@@ -27,12 +38,18 @@ interface RecitationTrackerProps {
 const RecitationTracker: React.FC<RecitationTrackerProps> = ({
   student,
   recitationTexts,
+  categories,
+  selectedCategoryId,
   onAddRecitationText,
   onDeleteRecitationText,
+  onAddCategory,
+  onSelectCategory,
   onRecordRecitation
 }) => {
   const [isTextDialogOpen, setIsTextDialogOpen] = useState(false);
+  const [isCategoryDialogOpen, setIsCategoryDialogOpen] = useState(false);
   const [newRecitationText, setNewRecitationText] = useState("");
+  const [newCategoryName, setNewCategoryName] = useState("");
   const [selectedText, setSelectedText] = useState<string | null>(null);
   const [status, setStatus] = useState<'completed' | 'incomplete'>('completed');
   const [notes, setNotes] = useState("");
@@ -40,11 +57,21 @@ const RecitationTracker: React.FC<RecitationTrackerProps> = ({
 
   const handleAddNewText = () => {
     if (newRecitationText.trim()) {
-      onAddRecitationText(newRecitationText.trim());
+      onAddRecitationText(newRecitationText.trim(), selectedCategoryId || undefined);
       setNewRecitationText("");
       setIsTextDialogOpen(false);
     } else {
       toast.error("篇目名称不能为空");
+    }
+  };
+
+  const handleAddNewCategory = () => {
+    if (newCategoryName.trim()) {
+      onAddCategory(newCategoryName.trim());
+      setNewCategoryName("");
+      setIsCategoryDialogOpen(false);
+    } else {
+      toast.error("类别名称不能为空");
     }
   };
 
@@ -90,6 +117,10 @@ const RecitationTracker: React.FC<RecitationTrackerProps> = ({
     return student.recitations.find(r => r.textId === text)?.status || null;
   };
 
+  const selectedCategory = selectedCategoryId 
+    ? categories.find(c => c.id === selectedCategoryId) 
+    : null;
+
   return (
     <div className="glass-card rounded-xl p-4 space-y-4">
       <h3 className="font-medium mb-4">
@@ -100,36 +131,98 @@ const RecitationTracker: React.FC<RecitationTrackerProps> = ({
         <>
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-bold">选择篇目</h2>
-            <Dialog open={isTextDialogOpen} onOpenChange={setIsTextDialogOpen}>
-              <DialogTrigger asChild>
-                <Button variant="outline" size="sm">
-                  <PlusCircle className="w-4 h-4 mr-1" />
-                  添加篇目
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>添加新篇目</DialogTitle>
-                </DialogHeader>
-                <div className="py-4">
-                  <Label htmlFor="newRecitationText">篇目名称</Label>
-                  <Input
-                    id="newRecitationText"
-                    value={newRecitationText}
-                    onChange={(e) => setNewRecitationText(e.target.value)}
-                    placeholder="请输入新篇目"
-                    className="mt-2"
-                  />
-                </div>
-                <DialogFooter>
-                  <DialogClose asChild>
-                    <Button variant="outline">取消</Button>
-                  </DialogClose>
-                  <Button onClick={handleAddNewText}>添加</Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
+            <div className="flex gap-2">
+              {/* Category Dropdown */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    <Tag className="w-4 h-4 mr-1" />
+                    {selectedCategory ? selectedCategory.name : "所有类别"}
+                    <ChevronDown className="w-4 h-4 ml-1" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-56 bg-white" align="end">
+                  <DropdownMenuItem 
+                    onClick={() => onSelectCategory(null)}
+                    className={selectedCategoryId === null ? "bg-primary/10" : ""}
+                  >
+                    所有类别
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  {categories.map(category => (
+                    <DropdownMenuItem 
+                      key={category.id}
+                      onClick={() => onSelectCategory(category.id)}
+                      className={selectedCategoryId === category.id ? "bg-primary/10" : ""}
+                    >
+                      {category.name}
+                    </DropdownMenuItem>
+                  ))}
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => setIsCategoryDialogOpen(true)}>
+                    <FolderPlus className="w-4 h-4 mr-2" />
+                    添加新类别
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+
+              {/* Add Text Button */}
+              <Dialog open={isTextDialogOpen} onOpenChange={setIsTextDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    <PlusCircle className="w-4 h-4 mr-1" />
+                    添加篇目
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>添加新篇目</DialogTitle>
+                  </DialogHeader>
+                  <div className="py-4">
+                    <Label htmlFor="newRecitationText">篇目名称</Label>
+                    <Input
+                      id="newRecitationText"
+                      value={newRecitationText}
+                      onChange={(e) => setNewRecitationText(e.target.value)}
+                      placeholder="请输入新篇目"
+                      className="mt-2"
+                    />
+                  </div>
+                  <DialogFooter>
+                    <DialogClose asChild>
+                      <Button variant="outline">取消</Button>
+                    </DialogClose>
+                    <Button onClick={handleAddNewText}>添加</Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            </div>
           </div>
+
+          {/* Add Category Dialog */}
+          <Dialog open={isCategoryDialogOpen} onOpenChange={setIsCategoryDialogOpen}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>添加新类别</DialogTitle>
+              </DialogHeader>
+              <div className="py-4">
+                <Label htmlFor="newCategoryName">类别名称</Label>
+                <Input
+                  id="newCategoryName"
+                  value={newCategoryName}
+                  onChange={(e) => setNewCategoryName(e.target.value)}
+                  placeholder="请输入新类别名称"
+                  className="mt-2"
+                />
+              </div>
+              <DialogFooter>
+                <DialogClose asChild>
+                  <Button variant="outline">取消</Button>
+                </DialogClose>
+                <Button onClick={handleAddNewCategory}>添加</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
 
           <div className="grid grid-cols-2 gap-3">
             {recitationTexts.map((text) => {
