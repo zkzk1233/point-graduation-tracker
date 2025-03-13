@@ -2,7 +2,7 @@
 import React, { useState, useRef } from "react";
 import { Student } from "@/types/student";
 import { Input } from "@/components/ui/input";
-import { Search, GraduationCap, Trash2, Upload } from "lucide-react";
+import { Search, GraduationCap, Trash2, Upload, Plus } from "lucide-react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { 

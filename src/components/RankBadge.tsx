@@ -1,6 +1,12 @@
 
 import React from "react";
-import { Rank } from "@/types/student";
+
+// Define the Rank type directly since it's no longer in student.ts
+interface Rank {
+  name: string;
+  color: string;
+  textColor: string;
+}
 
 interface RankBadgeProps {
   rank: Rank;

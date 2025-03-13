@@ -1,10 +1,18 @@
 
 import React from "react";
 import { Student } from "@/types/student";
-import { getRank, getNextRank, getPointsToNextRank, getProgressToNextRank } from "@/utils/rankUtils";
 import RankBadge from "./RankBadge";
 import { Progress } from "@/components/ui/progress";
 import { GraduationCap, Star, Award } from "lucide-react";
+
+// Define simple rank utilities since the module is missing
+const getRank = (student: Student) => {
+  return {
+    name: "学生",
+    color: "bg-blue-100",
+    textColor: "text-blue-800"
+  };
+};
 
 interface StudentCardProps {
   student: Student;
@@ -13,11 +21,10 @@ interface StudentCardProps {
 }
 
 const StudentCard: React.FC<StudentCardProps> = ({ student, onSelect, isSelected }) => {
-  const rank = getRank(student.totalPoints);
-  const nextRank = getNextRank(student);
-  const pointsToNext = getPointsToNextRank(student);
-  const progress = getProgressToNextRank(student);
-
+  const rank = getRank(student);
+  // Since totalPoints no longer exists, we'll use recitation count instead
+  const recitationCount = student.recitations.length;
+  
   return (
     <div 
       className={`glass-card p-4 rounded-xl cursor-pointer transition-all duration-300 ${
@@ -58,24 +65,15 @@ const StudentCard: React.FC<StudentCardProps> = ({ student, onSelect, isSelected
         <div className="flex justify-between items-center mb-1">
           <div className="flex items-center">
             <Star className="w-4 h-4 text-amber-500 mr-1" />
-            <span className="text-sm font-medium">{student.totalPoints} 分</span>
+            <span className="text-sm font-medium">{recitationCount} 篇</span>
           </div>
-          {nextRank && (
-            <span className="text-xs text-muted-foreground">还需 {pointsToNext} 分升级</span>
-          )}
         </div>
         
-        <Progress value={progress} className="h-1.5" />
+        <Progress value={recitationCount > 0 ? (recitationCount / 10) * 100 : 0} className="h-1.5" />
         
-        {nextRank ? (
-          <div className="mt-1 text-xs text-right text-muted-foreground">
-            下一级: <RankBadge rank={nextRank} className="ml-1 text-[10px] py-0 px-1.5" />
-          </div>
-        ) : (
-          <div className="mt-1 text-xs text-right text-primary font-medium">
-            已达最高级别!
-          </div>
-        )}
+        <div className="mt-1 text-xs text-right text-muted-foreground">
+          背诵进度
+        </div>
       </div>
     </div>
   );
