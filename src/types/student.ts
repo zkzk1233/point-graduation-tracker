@@ -3,17 +3,27 @@ export interface PointEntry {
   id: string;
   amount: number;
   description: string;
-  category: string;  // Add category field to track what type of activity earned points
+  category: string;
   timestamp: Date;
+}
+
+export interface RecitationEntry {
+  id: string;
+  textId: string;
+  status: 'completed' | 'incomplete';
+  timestamp: Date;
+  points: number;
+  notes: string;
 }
 
 export interface Student {
   id: string;
   name: string;
   studentId: string;
-  avatar: string;  // Required field for student avatar
+  avatar: string;
   totalPoints: number;
   pointsHistory: PointEntry[];
+  recitations: RecitationEntry[];
 }
 
 export type Rank = {

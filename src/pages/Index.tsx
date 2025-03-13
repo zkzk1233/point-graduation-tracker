@@ -21,7 +21,8 @@ const Index = () => {
     handleAddCategory,
     handleDeleteCategory,
     handleAddRecitationText,
-    handleDeleteRecitationText
+    handleDeleteRecitationText,
+    handleRecordRecitation
   } = useStudentData();
   
   const [activeTab, setActiveTab] = useState<string>("avatars");
@@ -60,6 +61,7 @@ const Index = () => {
             onDeleteCategory={handleDeleteCategory}
             onAddRecitationText={handleAddRecitationText}
             onDeleteRecitationText={handleDeleteRecitationText}
+            onRecordRecitation={handleRecordRecitation}
           />
         </div>
 
@@ -78,6 +80,7 @@ const Index = () => {
           onDeleteCategory={handleDeleteCategory}
           onAddRecitationText={handleAddRecitationText}
           onDeleteRecitationText={handleDeleteRecitationText}
+          onRecordRecitation={handleRecordRecitation}
         />
       </div>
     </div>

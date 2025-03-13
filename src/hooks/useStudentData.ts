@@ -1,6 +1,5 @@
-
 import { useState, useEffect } from "react";
-import { Student, PointEntry, DEFAULT_POINT_CATEGORIES, DEFAULT_RECITATION_TEXTS } from "@/types/student";
+import { Student, PointEntry, RecitationEntry, DEFAULT_POINT_CATEGORIES, DEFAULT_RECITATION_TEXTS } from "@/types/student";
 import { v4 as uuidv4 } from 'uuid';
 import { toast } from "sonner";
 
@@ -25,10 +24,18 @@ export function useStudentData() {
         const studentsWithDates = parsedData.map((student: any) => ({
           ...student,
           avatar: student.avatar || "", // Ensure avatar exists
+          recitations: student.recitations || [], // Ensure recitations array exists
           pointsHistory: student.pointsHistory.map((entry: any) => ({
             ...entry,
             timestamp: new Date(entry.timestamp)
-          }))
+          })),
+          // Convert recitation timestamps if they exist
+          recitations: student.recitations 
+            ? student.recitations.map((entry: any) => ({
+                ...entry,
+                timestamp: new Date(entry.timestamp)
+              }))
+            : []
         }));
         setStudents(studentsWithDates);
       } catch (error) {
@@ -101,7 +108,8 @@ export function useStudentData() {
       studentId,
       avatar: avatarUrl,
       totalPoints: 0,
-      pointsHistory: []
+      pointsHistory: [],
+      recitations: []
     };
 
     setStudents(prev => [...prev, newStudent]);
@@ -175,6 +183,83 @@ export function useStudentData() {
         description: `${student.name}: ${amount > 0 ? '+' : ''}${amount} 分 (${category || "一般活动"})`
       });
     }
+  };
+
+  // Handle recording a recitation
+  const handleRecordRecitation = (
+    studentId: string, 
+    textId: string, 
+    status: 'completed' | 'incomplete',
+    points: number,
+    notes: string = ""
+  ) => {
+    const newRecitationEntry: RecitationEntry = {
+      id: uuidv4(),
+      textId,
+      status,
+      points,
+      notes,
+      timestamp: new Date()
+    };
+
+    setStudents(prev => 
+      prev.map(student => {
+        if (student.id === studentId) {
+          // Update existing recitation or add new one
+          const existingIndex = student.recitations.findIndex(r => r.textId === textId);
+          let newRecitations = [...student.recitations];
+          
+          if (existingIndex >= 0) {
+            // Update existing recitation
+            newRecitations[existingIndex] = newRecitationEntry;
+          } else {
+            // Add new recitation
+            newRecitations = [newRecitationEntry, ...newRecitations];
+          }
+          
+          // Also add points if completed
+          let newTotalPoints = student.totalPoints;
+          let newPointsHistory = [...student.pointsHistory];
+          
+          if (status === 'completed' && points > 0) {
+            newTotalPoints += points;
+            
+            const pointEntry: PointEntry = {
+              id: uuidv4(),
+              amount: points,
+              description: `背诵${textId}`,
+              category: "背诵",
+              timestamp: new Date()
+            };
+            
+            newPointsHistory = [pointEntry, ...newPointsHistory];
+          }
+          
+          return {
+            ...student,
+            totalPoints: newTotalPoints,
+            pointsHistory: newPointsHistory,
+            recitations: newRecitations
+          };
+        }
+        return student;
+      })
+    );
+    
+    const student = students.find(s => s.id === studentId);
+    if (student) {
+      toast.success(`背诵记录已更新`, {
+        description: `${student.name}: ${textId} - ${status === 'completed' ? '已完成' : '未完成'}`
+      });
+    }
+  };
+
+  // Get recitation status for a student and text
+  const getRecitationStatus = (studentId: string, textId: string) => {
+    const student = students.find(s => s.id === studentId);
+    if (!student) return null;
+    
+    return student.recitations.find(r => r.textId === textId) || null;
   };
 
   // Handle selecting a student
@@ -295,6 +380,8 @@ export function useStudentData() {
     handleAddCategory,
     handleDeleteCategory,
     handleAddRecitationText,
-    handleDeleteRecitationText
+    handleDeleteRecitationText,
+    handleRecordRecitation,
+    getRecitationStatus
   };
 }
